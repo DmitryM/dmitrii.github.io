@@ -1,11 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dmitrii Malikov</title>
+  <script src="https://kit.fontawesome.com/27e14a33d8.js" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+  <style>
+    /*
+    YUI 3.18.1 (build f7e7bcb)
+    Copyright 2014 Yahoo! Inc. All rights reserved.
+    Licensed under the BSD License.
+    http://yuilibrary.com/license/
+    */
+
+    html{color:#000;background:#FFF}body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td{margin:0;padding:0}table{border-collapse:collapse;border-spacing:0}fieldset,img{border:0}address,caption,cite,code,dfn,em,strong,th,var{font-style:normal;font-weight:normal}ol,ul{list-style:none}caption,th{text-align:left}h1,h2,h3,h4,h5,h6{font-size:100%;font-weight:normal}q:before,q:after{content:''}abbr,acronym{border:0;font-variant:normal}sup{vertical-align:text-top}sub{vertical-align:text-bottom}input,textarea,select{font-family:inherit;font-size:inherit;font-weight:inherit;*font-size:100%}legend{color:#000}#yui3-css-stamp.cssreset{display:none}
+
+    html {
+      font-family: 'Open Sans', sans-serif;
+      background-color: #000;
+      color: #fff;
+    }
+
+    .card {
+      max-width: 320px;
+      padding: 14px;
+      margin: 30px auto;
+    }
+
+    .card__photo {
+      float: left;
+      width: 70px;
+      /* height: 80px; */
+      margin: 10px;
+      border: 1px solid #fff;
+    }
+
+    .card__title {
+      display: inline-block;
+      font-size: 24px;
+    }
+
+    .card__link {
+      font-size: 18px;
+      color: #fff;
+      margin-left: 4px;
+    }
+
+    .card__line {
+      font-size: 16px;
+    }
+
+    .resume {
+      position: relative;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .resume:before {
+      content: '';
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background-color: #FFF;
+      box-shadow: 1px 1px 1px rgba(0,0,0,.5);
+    }
+
+    .resume:after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+
+    .resume__block {
+      width: 50%;
+      box-sizing: border-box;
+      margin: 14px 0;
+    }
+
+    .resume__block_type_experience {
+      clear: both;
+      float: left;
+    }
+
+    .resume__block_type_skill {
+      float: right;
+    }
+
+    .resume__block_type_skill + .resume__block_type_skill {
+      clear: both;
+    }
+
+    .resume__item {
+      padding: 0 10px;
+    }
+
+    .resume__item_type_title {
+      position: relative;
+      border-bottom: 1px solid #fff;
+      font-weight: 600;
+    }
+
+    .resume__item_type_period {
+      background-color: #252525;
+    }
+
+    .resume__item_type_position {
+      font-style: italic;
+    }
+
+    .resume__block_type_skill .resume__item_type_title {
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .resume__item_type_title:after {
+      content: '';
+      display: block;
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      right: -5px;
+      bottom: -5px;
+      background-color: #fff;
+      border-radius: 4.5px;
+    }
+
+    .resume__item_type_list {
+      list-style-type: disc;
+      padding-left: 40px;
+    }
+
+    .resume__block_type_skill .resume__item_type_title:after {
+      left: -4px;
+    }
+
+    .resume__item_type_position,
+    .resume__item_type_list {
+    margin-top: 6px;
+    }
+  </style>
 </head>
-<body style="background: url('1527147021191418215.jpg'); background-size: cover;">
-    
+<body>
+  <section class="card">
+    <img class="card__photo" src="photo_2020-02-07_19-54-41.jpg">
+    <h1 class="card__title">Dmitrii Malikov</h1>
+    <a class="card__link" href="tg://resolve?domain=dom1tor1"><i class="fab fa-telegram-plane"></i></a>
+    <a class="card__link" href="mailto:dmitry.malikov@gmail.com"><i class="far fa-envelope"></i></a>
+    <p class="card__line">19.10.1988</p>
+    <p class="card__line">Voronezh, Russia</p>
+    <p class="card__line">English, B2</p>
+  </section>
+  <section class="resume">
+    <div class="resume__block resume__block_type_experience">
+      <p class="resume__item resume__item_type_title">T-Systems, Deutsche Telekom IT Solutions</p>
+      <p class="resume__item resume__item_type_period">01.2019 - present</p>
+      <p class="resume__item resume__item_type_position">Software Engineer</p>
+      <p class="resume__item">IT Services Automation</p>
+    </div>
+    <div class="resume__block resume__block_type_skill">
+      <p class="resume__item resume__item_type_title">ServiceNow Development</p>
+      <ul class="resume__item resume__item_type_list">
+        <li>ServiceNow ITSM & CSM</li>
+        <li>JavaScript</li>
+        <li>AngularJS</li>
+      </ul>
+    </div>
+    <div class="resume__block resume__block_type_skill">
+      <p class="resume__item resume__item_type_title">Oracle Development</p>
+      <ul class="resume__item resume__item_type_list">
+        <li>Oracle Database</li>
+        <li>Oracle APEX</li>
+        <li>PL/SQL, utPLSQL</li>
+        <li>REST, ORDS</li>
+      </ul>
+    </div>
+    <div class="resume__block resume__block_type_skill">
+      <p class="resume__item resume__item_type_title">Automation & DevOps</p>
+      <ul class="resume__item resume__item_type_list">
+        <li>Linux, Bash</li>
+        <li>GitLab</li>
+        <li>Jenkins</li>
+        <li>Docker</li>
+        <li>HP Operations Orchestration</li>
+        <li>Ansible</li>
+      </ul>
+    </div>
+    <div class="resume__block resume__block_type_experience">
+      <p class="resume__item resume__item_type_title">Demis Group</p>
+      <p class="resume__item resume__item_type_period">03.2016 - 01.2019</p>
+      <p class="resume__item resume__item_type_position">Software Engineer</p>
+      <p class="resume__item">E-Commerce & Digital Marketing</p>
+    </div>
+    <div class="resume__block resume__block_type_skill">
+      <p class="resume__item resume__item_type_title">Full Stack Development</p>
+      <ul class="resume__item resume__item_type_list">
+        <li>Debian/Ubuntu Servers</li>
+        <li>JavaScript, Node.js, Webpack, Grunt, Gulp, Mocha, etc</li>
+        <li>PHP, Composer, Yii, Yii2, CodeIgniter</li>
+        <li>Python</li>
+        <li>MySQL, PostgreSQL</li>
+        <li>WordPress, 1C Bitrix, OpenCard, MODx, etc</li>
+        <li>HTML, CSS, SCSS, BEM, Bootstrap</li>
+        <li>Git</li>
+      </ul>
+    </div>
+    <div class="resume__block resume__block_type_experience">
+      <p class="resume__item resume__item_type_title">Freelance</p>
+      <p class="resume__item resume__item_type_period">2005 - present</p>
+    </div>
+    <div class="resume__block resume__block_type_skill">
+      <p class="resume__item resume__item_type_title">Full Stack Development</p>
+      <ul class="resume__item resume__item_type_list">
+        <li>Linux Servers</li>
+        <li>Delphi, PHP, Python, Java, C++</li>
+        <li>JavaScript, WebSockets, Node.js, Webpack, Grunt, Gulp</li>
+        <li>Frameworks (Zend, Yii, Yii2, CodeIgniter, Express.js)</li>
+        <li>HTML, CSS</li>
+        <li>etc</li>
+      </ul>
+    </div>
+  </section>
 </body>
 </html>

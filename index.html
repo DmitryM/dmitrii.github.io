@@ -17,16 +17,38 @@
 
     html{color:#000;background:#FFF}body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td{margin:0;padding:0}table{border-collapse:collapse;border-spacing:0}fieldset,img{border:0}address,caption,cite,code,dfn,em,strong,th,var{font-style:normal;font-weight:normal}ol,ul{list-style:none}caption,th{text-align:left}h1,h2,h3,h4,h5,h6{font-size:100%;font-weight:normal}q:before,q:after{content:''}abbr,acronym{border:0;font-variant:normal}sup{vertical-align:text-top}sub{vertical-align:text-bottom}input,textarea,select{font-family:inherit;font-size:inherit;font-weight:inherit;*font-size:100%}legend{color:#000}#yui3-css-stamp.cssreset{display:none}
 
+    html, body {
+      position: relative;
+      height: 100%;
+    }
+
     html {
       font-family: 'Open Sans', sans-serif;
       background-color: #000;
       color: #fff;
     }
 
+    body {
+      overflow: hidden;
+    }
+
+    body.active {
+      overflow: auto;
+    }
+
     .card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
       max-width: 326px;
+      transform: translate(-50%, -50%);
       padding: 14px;
-      margin: 30px auto;
+      transition: all 1s ease;
+    }
+
+    body.active .card {
+      top: 0;
+      transform: translateX(-50%);
     }
 
     .card__photo {
@@ -68,21 +90,45 @@
     }
 
     .card__line {
+      opacity: 0;
+      visibility: hidden;
       font-size: 16px;
+      transition: all 1s ease 1s;
+    }
+
+    body.active .card__line {
+      opacity: 100;
+      visibility: visible;
     }
 
     .information {
+      opacity: 0;
+      visibility: hidden;
       box-sizing: border-box;
       max-width: 700px;
       margin: 30px auto;
-      padding: 0 10px;
+      padding: 190px 10px 0;
       text-align: justify;
+      transition: all 1s ease 2s;
+    }
+
+    body.active .information {
+      opacity: 100;
+      visibility: visible;
     }
 
     .resume {
+      opacity: 0;
+      visibility: hidden;
       position: relative;
       max-width: 700px;
       margin: 0 auto 26px;
+      transition: all 1s ease 3s;
+    }
+
+    body.active .resume {
+      opacity: 100;
+      visibility: visible;
     }
 
     .resume:before {
@@ -183,11 +229,7 @@
 </head>
 <body>
   <section class="card">
-    <!-- <img class="card__photo" src="photo_2020-02-07_19-54-41.jpg"> -->
-    <h1 class="card__title">Dmitrii Malikov</h1>
-    <!-- <a class="card__link" href="tg://resolve?domain=dom1tor1"><i class="fab fa-telegram-plane"></i></a> -->
-    <!-- <a class="card__link" href="mailto:dmitry.malikov@gmail.com"><i class="far fa-envelope"></i></a> -->
-    <!-- <p class="card__line">19.10.1988</p> -->
+    <h1 class="card__title" onclick="javascript:document.body.className = 'active';">Dmitrii Malikov</h1>
     <p class="card__line">> Software Engineer</p>
     <p class="card__line">> Barcelona</p>
     <p class="card__line">Links: <a class="card__link" href="https://www.linkedin.com/in/dmitrii-malikov-858640bb"><i class="fab fa-linkedin"></i></a></p>

@@ -24,7 +24,7 @@
     }
 
     .card {
-      max-width: 320px;
+      max-width: 326px;
       padding: 14px;
       margin: 30px auto;
     }
@@ -33,13 +33,32 @@
       float: left;
       width: 70px;
       /* height: 80px; */
-      margin: 10px;
       border: 1px solid #fff;
     }
 
     .card__title {
       display: inline-block;
-      font-size: 24px;
+      position: relative;
+      font-size: 46px;
+      cursor: pointer;
+    }
+
+    .card__title:after {
+      content: "";
+      display: block;
+      position: absolute;
+      bottom: 12px;
+      right: -22px;
+      width: 20px;
+      border-bottom: #fff solid 2px;
+      animation: cursor 1s linear infinite;
+      transition: width 1s ease-in-out, right 1s ease-in-out;
+    }
+
+    @keyframes cursor {
+      50% {
+        opacity: 0;
+      }
     }
 
     .card__link {
@@ -63,7 +82,7 @@
     .resume {
       position: relative;
       max-width: 700px;
-      margin: 0 auto;
+      margin: 0 auto 26px;
     }
 
     .resume:before {
@@ -164,13 +183,14 @@
 </head>
 <body>
   <section class="card">
-    <img class="card__photo" src="photo_2020-02-07_19-54-41.jpg">
+    <!-- <img class="card__photo" src="photo_2020-02-07_19-54-41.jpg"> -->
     <h1 class="card__title">Dmitrii Malikov</h1>
-    <a class="card__link" href="tg://resolve?domain=dom1tor1"><i class="fab fa-telegram-plane"></i></a>
-    <a class="card__link" href="mailto:dmitry.malikov@gmail.com"><i class="far fa-envelope"></i></a>
-    <p class="card__line">19.10.1988</p>
-    <p class="card__line">Voronezh, Russia</p>
-    <p class="card__line">English, B2</p>
+    <!-- <a class="card__link" href="tg://resolve?domain=dom1tor1"><i class="fab fa-telegram-plane"></i></a> -->
+    <!-- <a class="card__link" href="mailto:dmitry.malikov@gmail.com"><i class="far fa-envelope"></i></a> -->
+    <!-- <p class="card__line">19.10.1988</p> -->
+    <p class="card__line">> Software Engineer</p>
+    <p class="card__line">> Barcelona</p>
+    <p class="card__line">Links: <a class="card__link" href="https://www.linkedin.com/in/dmitrii-malikov-858640bb"><i class="fab fa-linkedin"></i></a></p>
   </section>
   <section class="information">
     <p>As a developer, I have a lot of experience with different IT projects, from different areas. I can work on several tasks at the same time and prioritize them. I have experience of working in international teams using SCRUM or Waterfall approaches.</p>

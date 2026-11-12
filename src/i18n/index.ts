@@ -36,18 +36,16 @@ export interface UIStrings {
   observe: string;
   aboutHeading: string;
   loader: string;
-  loaderDone: string;
   lang: { label: string; aria: string };
   emailLabel: string;
   ogAlt: string;
-  coords: (lat: number, lon: number) => string;
   levels: { title: string; ionised: string; caption: string };
   eV: string;
   series: string[];
   bands: { ultraviolet: string; visible: string; infrared: string };
   units: { pm: string; nm: string; um: string; mm: string; m: string; km: string; au: string; ly: string; kly: string; kms: string };
   objects: string[];
-  readouts: { clock: string; vrot: string; flat: string; radius: string; arms: string; densityWave: string; darkHalo: string };
+  readouts: { clock: string; vrot: string; flat: string; radius: string; arms: string; densityWave: string };
   obs: {
     kicker: string;
     title: string;
@@ -72,12 +70,10 @@ export const UI: Record<Locale, UIStrings> = {
     fieldOfView: 'Field of view',
     observe: 'Observe',
     aboutHeading: 'About',
-    loader: 'Collapsing the wavefunction',
-    loaderDone: 'Observed',
+    loader: 'Loading',
     lang: { label: 'RU', aria: 'Русская версия' },
     emailLabel: 'Email',
     ogAlt: 'A ray-traced black hole with a glowing, Doppler-beamed accretion disk',
-    coords: (lat, lon) => `${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E`,
     levels: {
       title: 'Hydrogen energy levels, one per role, with the emitted spectral lines',
       ionised: 'ionised',
@@ -105,7 +101,7 @@ export const UI: Record<Locale, UIStrings> = {
       'spiral arm',
       'Milky Way–like galaxy',
     ],
-    readouts: { clock: 'clock', vrot: 'v_rot', flat: 'flat', radius: 'R', arms: 'arms', densityWave: 'density wave, m = 2', darkHalo: 'dark matter halo' },
+    readouts: { clock: 'clock', vrot: 'v_rot', flat: 'flat', radius: 'R', arms: 'arms', densityWave: 'density wave, m = 2' },
     obs: {
       kicker: 'Observatory',
       title: 'Schwarzschild black hole',
@@ -128,12 +124,10 @@ export const UI: Record<Locale, UIStrings> = {
     fieldOfView: 'Поле зрения',
     observe: 'Наблюдать',
     aboutHeading: 'Обо мне',
-    loader: 'Коллапс волновой функции',
-    loaderDone: 'Измерено',
+    loader: 'Загрузка',
     lang: { label: 'EN', aria: 'English version' },
     emailLabel: 'Почта',
     ogAlt: 'Чёрная дыра с аккреционным диском, рассчитанная трассировкой лучей',
-    coords: (lat, lon) => `${num(lat, 4, 'ru')}° с. ш., ${num(lon, 4, 'ru')}° в. д.`,
     levels: {
       title: 'Уровни энергии атома водорода — по одному на роль — и испускаемые спектральные линии',
       ionised: 'ионизация',
@@ -161,7 +155,7 @@ export const UI: Record<Locale, UIStrings> = {
       'спиральный рукав',
       'галактика вроде Млечного Пути',
     ],
-    readouts: { clock: 'часы', vrot: 'v_rot', flat: 'плоская', radius: 'R', arms: 'рукава', densityWave: 'волна плотности, m = 2', darkHalo: 'гало тёмной материи' },
+    readouts: { clock: 'часы', vrot: 'v_rot', flat: 'плоская', radius: 'R', arms: 'рукава', densityWave: 'волна плотности, m = 2' },
     obs: {
       kicker: 'Обсерватория',
       title: 'Чёрная дыра Шварцшильда',

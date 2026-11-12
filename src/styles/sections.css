@@ -120,26 +120,44 @@ main {
   text-wrap: balance;
   text-shadow: 0 2px 30px rgb(5 6 10 / 0.8);
 }
-.about__follow {
-  font-size: var(--step-0);
-  color: var(--ink-2);
-}
 
 .interstitial {
-  height: 120svh;
-  display: grid;
-  place-items: center;
-  padding: var(--gutter);
+  height: 190svh;
 }
-.interstitial__text {
-  max-width: 18ch;
+.interstitial .counter {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+
+/* Powers-of-Ten scale counter (interstitial + zoom-out) */
+.counter {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.counter__scale {
+  font-size: clamp(2.6rem, 1rem + 6vw, 6.4rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 40px rgb(5 6 10 / 0.9);
+}
+.counter__scale sup {
+  font-size: 0.5em;
+  vertical-align: 0.9em;
+}
+.counter__object {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: var(--step-3);
-  line-height: 1.05;
-  text-align: center;
-  text-wrap: balance;
-  color: var(--ink);
+  font-size: var(--step-1);
+  color: var(--ink-2);
+  text-shadow: 0 0 30px rgb(5 6 10 / 0.9);
 }
 
 /* ── III · experience ──────────────────────────────────────── */
@@ -148,7 +166,7 @@ main {
 }
 .experience__head {
   display: grid;
-  gap: 22px;
+  gap: 18px;
   max-width: 880px;
   margin: 0 auto 26svh;
   text-align: center;
@@ -163,8 +181,9 @@ main {
   text-wrap: balance;
 }
 .experience__note {
-  max-width: 60ch;
-  color: var(--ink-2);
+  max-width: 52ch;
+  color: var(--ink-3);
+  font-size: var(--step--1);
 }
 
 .experience__body {
@@ -414,39 +433,7 @@ main {
   position: sticky;
   top: 0;
   height: 100svh;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 10px;
-  text-align: center;
-  font-family: var(--font-mono);
 }
-.zoom__caption {
-  font-size: var(--step--2);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.zoom__scale {
-  font-size: clamp(2.6rem, 1rem + 6vw, 6.4rem);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 40px rgb(5 6 10 / 0.9);
-}
-.zoom__scale sup {
-  font-size: 0.5em;
-  vertical-align: 0.9em;
-}
-.zoom__object {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--step-1);
-  letter-spacing: 0;
-  color: var(--ink-2);
-}
-
 .contact__body {
   min-height: 100svh;
   display: grid;
@@ -468,10 +455,6 @@ main {
   letter-spacing: -0.025em;
   text-wrap: balance;
   text-shadow: 0 2px 50px rgb(5 6 10 / 0.85);
-}
-.contact__text {
-  max-width: 46ch;
-  color: var(--ink-2);
 }
 .links {
   display: grid;
@@ -556,14 +539,9 @@ main {
   letter-spacing: 0.06em;
   color: var(--ink-3);
 }
-.footer__note {
-  grid-column: 1;
-  color: var(--ink-4);
-  max-width: 70ch;
-}
 .footer__back {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1;
   color: var(--ink-2);
   border-bottom: 1px solid var(--line-2);
   padding-bottom: 2px;
@@ -608,15 +586,11 @@ main {
   line-height: 0.9;
 }
 :root:lang(ru) .about__lead,
-:root:lang(ru) .interstitial__text,
 :root:lang(ru) .experience__title,
 :root:lang(ru) .contact__title,
 :root:lang(ru) .role__title {
   letter-spacing: -0.02em;
   line-height: 1.12;
-}
-:root:lang(ru) .interstitial__text {
-  max-width: 22ch;
 }
 :root:lang(ru) .contact__title {
   font-size: clamp(2.2rem, 1.2rem + 4vw, 5.6rem);

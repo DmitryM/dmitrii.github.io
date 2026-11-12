@@ -58,6 +58,9 @@ export class BlackHole implements Chapter {
   observing = false;
   readonly observatory: ObservatoryParams = { lensing: true, doppler: true, redshift: true, temperature: 5400, inclination: 84, distance: 26 };
   private obsBlend = 0;
+  /** opening camera arrival, 0 → 1 (advanced by update() once started) */
+  intro = 0;
+  private introRunning = false;
   private obsAz = 0;
   private toggles = { lensing: 1, doppler: 1, redshift: 1, temperature: 5400 };
 
@@ -103,7 +106,7 @@ export class BlackHole implements Chapter {
       minFilter: LinearMipmapLinearFilter,
       magFilter: LinearFilter,
     });
-    this.noiseTarget = new WebGLRenderTarget(1024, 256, {
+    this.noiseTarget = new WebGLRenderTarget(2048, 512, {
       type: HalfFloatType,
       generateMipmaps: true,
       minFilter: LinearMipmapLinearFilter,
@@ -189,7 +192,11 @@ export class BlackHole implements Chapter {
 
   /** Render the tracer once into a small target (used by the GPU benchmark). */
   benchmarkFrame(target: WebGLRenderTarget) {
+    // measure the hero framing, not the far-away arrival shot
+    const intro = this.intro;
+    this.intro = 1;
     this.updateCamera(0);
+    this.intro = intro;
     this.trace.material.uniforms.uResolution!.value.set(target.width, target.height);
     this.trace.render(this.renderer, target);
   }
@@ -227,12 +234,17 @@ export class BlackHole implements Chapter {
         [0, Math.log(portrait ? 30 : 26)],
         [0.3, Math.log(18.5)],
         [0.62, Math.log(9)],
-        [0.86, Math.log(3.1)],
-        [1, Math.log(1.22)],
+        [0.84, Math.log(3.1)],
+        [0.93, Math.log(1.35)],
+        [0.985, Math.log(1.012)],
+        // a static observer this close to the horizon sees the whole sky squeezed into a dot
+        [1, Math.log(1.0004)],
       ],
       p,
     );
-    let r = Math.exp(lnR);
+    // opening shot: arrive from far away with a slow swing (only once, after the loader)
+    const arrive = 1 - Math.pow(1 - this.intro, 4);
+    let r = Math.exp(lnR) * lerp(3.4, 1, arrive);
     let incl =
       keyframes(
         [
@@ -251,8 +263,8 @@ export class BlackHole implements Chapter {
       ],
       p,
     );
-    az += this.time * 0.01 + pointerX * 0.09;
-    incl += -pointerY * 0.045;
+    az += this.time * 0.01 + pointerX * 0.09 - 0.9 * (1 - arrive);
+    incl += -pointerY * 0.045 - 0.16 * (1 - arrive);
     let roll = keyframes(
       [
         [0, -7],
@@ -287,7 +299,7 @@ export class BlackHole implements Chapter {
     this.up.crossVectors(this.right, this.fwd).normalize();
     // Final plunge: turn to look back out. Inside the photon sphere the whole visible universe
     // is squeezed into a shrinking bright window opposite the hole.
-    const turn = smoothstep(0.8, 1, this.progress) * (1 - smoothstep(0, 1, this.obsBlend)) * Math.PI * 0.98;
+    const turn = smoothstep(0.78, 0.97, this.progress) * (1 - smoothstep(0, 1, this.obsBlend)) * Math.PI;
     if (turn > 1e-4) {
       const c = Math.cos(turn);
       const s = Math.sin(turn);
@@ -314,8 +326,15 @@ export class BlackHole implements Chapter {
     this.tanHalfFov = clamp(Math.tan(30 * DEG) / aspect, Math.tan(21 * DEG), Math.tan(36 * DEG));
   }
 
+  /** Start the opening camera move (call when the loader has gone). */
+  startIntro(instant = false) {
+    this.introRunning = true;
+    if (instant) this.intro = 1;
+  }
+
   update(frame: FrameInfo) {
     this.time = frame.time;
+    if (this.introRunning && this.intro < 1) this.intro = Math.min(1, this.intro + frame.dt / 3.6);
     this.updateCamera(frame.dt, frame.pointer.x, frame.pointer.y);
 
     const o = this.observatory;
@@ -335,7 +354,7 @@ export class BlackHole implements Chapter {
     u.uRedshift!.value = tg.redshift;
     u.uDiskTemp!.value = tg.temperature;
     // brighten slightly while diving so the photon ring carries the frame
-    u.uExposure!.value = 1 + 0.6 * smoothstep(0.7, 1, this.progress);
+    u.uExposure!.value = (1 + 0.6 * smoothstep(0.7, 1, this.progress) + 2.5 * smoothstep(0.97, 1, this.progress)) * (0.15 + 0.85 * smoothstep(0, 0.6, this.intro));
   }
 
   prepare(renderer: WebGLRenderer) {
@@ -375,9 +394,9 @@ export class BlackHole implements Chapter {
     const r = this.r;
     const l = this.loc;
     return [
-      ['r', `${num(r, r < 10 ? 2 : 1, l)} r_s`],
+      ['r', `${num(r, r < 1.1 ? 4 : r < 10 ? 2 : 1, l)} r_s`],
       ['i', `${num(this.incl / DEG, 1, l)}°`],
-      [UI[l].readouts.clock, `${num(clockRate(r), 3, l)} t∞`],
+      [UI[l].readouts.clock, `${num(clockRate(r), clockRate(r) < 0.1 ? 4 : 3, l)} t∞`],
       ['M', `${num(6.5, 1, l)}×10⁹ M☉`],
     ];
   }

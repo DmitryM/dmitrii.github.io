@@ -146,6 +146,16 @@ vec3 primaryRay(vec2 ndc) {
 
 Trace trace(vec3 dir, float pixelAngle) {
   vec3 pos = uCamPos;
+  // The camera is a static observer: convert its locally measured direction to the coordinate
+  // direction the integrator uses (gravitational aberration, tan ψ = tan α / √(1 − r_s/r)).
+  // Far away this is a ~2% effect; at the horizon it squeezes the whole sky into a point.
+  {
+    float r0 = length(pos);
+    vec3 rh = pos / r0;
+    float dr = dot(dir, rh);
+    float k = mix(1.0, sqrt(max(1.0 - 1.0 / r0, 1e-7)), uLensing);
+    dir = normalize(rh * (dr * k) + (dir - rh * dr));
+  }
   vec3 hv = cross(pos, dir);
   float h2 = dot(hv, hv) * uLensing;
 

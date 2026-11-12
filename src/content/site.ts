@@ -4,7 +4,7 @@
  *
  * Résumé facts are carried over verbatim from the previous malikov.page; the Russian version is a
  * translation (official certification titles and technology names stay in English).
- * Chapter titles / taglines are editorial copy — edit freely.
+ * Interface copy is deliberately plain: section names and labels only.
  */
 import type { Locale } from '../i18n/index.ts';
 
@@ -61,13 +61,13 @@ export interface SiteText {
   ogLocale: string;
   person: { name: string; givenName: string; familyName: string; alternateName: string; jobTitle: string; location: string; country: string };
   seo: { title: string; description: string; keywords: string };
+  /** plain section names: HUD, chapter rail and section headings */
   chapters: { numeral: string; title: string }[];
-  hero: { kicker: string; observe: string; scrollHint: string };
-  about: { kicker: string; lead: string; follow: string; interstitial: string };
-  experience: { kicker: string; title: string; note: string; roles: RoleText[] };
-  zoom: { caption: string };
-  contact: { kicker: string; title: string; text: string };
-  footer: { note: string; back: string };
+  hero: { observe: string; scrollHint: string };
+  about: { lead: string };
+  /** one factual line explaining the atom visualisation */
+  experience: { note: string; roles: RoleText[] };
+  footer: { back: string };
 }
 
 const roles: RoleMeta[] = [
@@ -102,22 +102,17 @@ const en: SiteText = {
       'Dmitrii Malikov, Dmitry Malikov, official web site, software engineer, Barcelona, ServiceNow, Oracle Database, automation, DevOps, web development, full stack developer, IT services, software solutions, JavaScript, PHP, Python, Linux, Docker, Kubernetes, Jenkins, GitLab, Oracle APEX, PL/SQL, web technologies, portfolio, resume, professional experience, tech skills, IT professional, digital solutions, coding, developer blog',
   },
   chapters: [
-    { numeral: 'I', title: 'Event Horizon' },
-    { numeral: 'II', title: 'Singularity' },
-    { numeral: 'III', title: 'Quantum Leaps' },
+    { numeral: 'I', title: 'Intro' },
+    { numeral: 'II', title: 'About' },
+    { numeral: 'III', title: 'Experience' },
     { numeral: 'IV', title: 'Contact' },
   ],
-  hero: { kicker: 'I — Event Horizon', observe: 'Observe the black hole', scrollHint: 'Fall in' },
+  hero: { observe: 'Observe the black hole', scrollHint: 'Scroll' },
   about: {
-    kicker: 'II — Singularity',
     lead: 'Software Engineer and Solution Designer based in Barcelona. Skilled in ServiceNow, Oracle Database, Automation & DevOps, Web Full Stack, and more.',
-    follow: 'Please see my work experience below.',
-    interstitial: 'Where general relativity ends, quantum mechanics begins.',
   },
   experience: {
-    kicker: 'III — Quantum Leaps',
-    title: 'A career in discrete energy levels',
-    note: 'Each role is a hydrogen eigenstate. Every step down the ladder is an electric-dipole-allowed transition (Δl = ±1) and emits a photon of exactly one wavelength.',
+    note: 'Each role is shown as an energy level of the hydrogen atom; moving between them emits a photon.',
     roles: [
       {
         title: 'Software Engineer',
@@ -176,16 +171,7 @@ const en: SiteText = {
       },
     ],
   },
-  zoom: { caption: 'Zooming out' },
-  contact: {
-    kicker: 'IV — Contact',
-    title: 'Let’s get entangled.',
-    text: 'Measure one end of the link and the other responds — no matter the distance.',
-  },
-  footer: {
-    note: 'Rendered in real time with three.js — every photon is traced along a Schwarzschild geodesic.',
-    back: 'Back to the horizon',
-  },
+  footer: { back: 'Back to top' },
 };
 
 const ru: SiteText = {
@@ -207,22 +193,17 @@ const ru: SiteText = {
       'Дмитрий Маликов, Dmitrii Malikov, инженер-программист, разработчик, Барселона, ServiceNow, Oracle Database, автоматизация, DevOps, веб-разработка, full-stack разработчик, ИТ-услуги, JavaScript, PHP, Python, Linux, Docker, Kubernetes, Jenkins, GitLab, Oracle APEX, PL/SQL, портфолио, резюме, опыт работы',
   },
   chapters: [
-    { numeral: 'I', title: 'Горизонт событий' },
-    { numeral: 'II', title: 'Сингулярность' },
-    { numeral: 'III', title: 'Квантовые скачки' },
-    { numeral: 'IV', title: 'Контакт' },
+    { numeral: 'I', title: 'Начало' },
+    { numeral: 'II', title: 'Обо мне' },
+    { numeral: 'III', title: 'Опыт' },
+    { numeral: 'IV', title: 'Контакты' },
   ],
-  hero: { kicker: 'I — Горизонт событий', observe: 'Наблюдать чёрную дыру', scrollHint: 'Упасть внутрь' },
+  hero: { observe: 'Наблюдать чёрную дыру', scrollHint: 'Вниз' },
   about: {
-    kicker: 'II — Сингулярность',
     lead: 'Инженер-программист и архитектор решений из Барселоны. ServiceNow, Oracle Database, автоматизация и DevOps, full-stack веб-разработка и многое другое.',
-    follow: 'Ниже — мой опыт работы.',
-    interstitial: 'Где кончается общая теория относительности, начинается квантовая механика.',
   },
   experience: {
-    kicker: 'III — Квантовые скачки',
-    title: 'Карьера из дискретных уровней энергии',
-    note: 'Каждая роль — собственное состояние атома водорода. Каждый шаг вниз по лестнице — разрешённый электродипольный переход (Δl = ±1), и он испускает фотон строго одной длины волны.',
+    note: 'Каждая роль показана как уровень энергии атома водорода; переход между ними испускает фотон.',
     roles: [
       {
         title: 'Инженер-программист',
@@ -281,16 +262,7 @@ const ru: SiteText = {
       },
     ],
   },
-  zoom: { caption: 'Отдаляемся' },
-  contact: {
-    kicker: 'IV — Контакт',
-    title: 'Давайте запутаемся.',
-    text: 'Квантово: измерьте одну частицу пары — и вторая откликнется, на любом расстоянии.',
-  },
-  footer: {
-    note: 'Рендеринг в реальном времени на three.js — каждый фотон трассируется вдоль геодезической Шварцшильда.',
-    back: 'Назад к горизонту',
-  },
+  footer: { back: 'Наверх' },
 };
 
 export const site = {

@@ -34,6 +34,8 @@ uniform float uViewportH;
 uniform float uShrink;
 uniform float uIntensity;
 uniform float uFlight;
+uniform float uBurst; // 0 = all of the vacuum sits in the singularity point, 1 = fully expanded
+uniform float uPulse; // brief brightening at a quantum jump
 uniform vec3 uColorPos;
 uniform vec3 uColorNeg;
 uniform vec3 uColorVac;
@@ -76,6 +78,10 @@ void main() {
 
   vec3 a = statePos(seg);
   vec3 b = statePos(seg + 1);
+  // the vacuum bursts out of the point the sky collapsed into (ease-out, per-particle speed)
+  float bs = clamp((uBurst - 0.08) / 0.75 * (1.0 + aSeed * 0.6), 0.0, 1.0);
+  float burstScale = 1.0 - pow(1.0 - bs, 3.0);
+  if (seg == 0) a *= burstScale;
   float lag = aSeed * 0.42;
   float tt = smoothstep(0.0, 1.0, clamp((t - lag) / 0.58, 0.0, 1.0));
   vec3 p = mix(a, b, tt);
@@ -104,11 +110,14 @@ void main() {
   }
   gl_PointSize = min(px, 7.0);
 
-  // vacuum: sparse virtual pairs flicker in and out of existence
+  // vacuum: hot during the burst, then sparse virtual pairs flicker in and out of existence
   float flicker = pow(0.5 + 0.5 * sin(uTime * (0.9 + 2.3 * aSeed) + aSeed * 83.0), 16.0);
   float vac = seg == 0 ? 1.0 - tt : 0.0;
-  float glow = mix(1.0, flicker * 2.6, vac);
+  float settle = smoothstep(0.3, 0.75, uBurst);
+  // bright only while in flight: an expanding hot shell rather than a uniform field of noise
+  float hot = 0.04 + 9.0 * pow(1.0 - bs, 3.0) * step(0.001, bs);
+  float glow = mix(1.0, mix(hot, flicker * 2.6, settle), vac);
 
-  vColor = mix(stateColor(seg), stateColor(seg + 1), tt) * uIntensity * glow;
+  vColor = mix(stateColor(seg), stateColor(seg + 1), tt) * uIntensity * glow * (1.0 + uPulse);
   vAlpha = alpha;
 }

@@ -17,9 +17,10 @@ import { DynamicResolution, TIERS, guessTier, isTierName, lowerTier, timeGpu, ty
 import { BlackHole } from '../gl/chapters/blackhole/BlackHole';
 import { Orbitals, readOrbitalStates } from '../gl/chapters/orbitals/Orbitals';
 import { Galaxy } from '../gl/chapters/galaxy/Galaxy';
+import { Flash } from '../gl/Flash';
 import { buildBlackbodyLUT } from '../physics/blackbody';
 import { Hud } from '../ui/Hud';
-import { damp } from '../gl/util';
+import { damp, smoothstep } from '../gl/util';
 import type { OrbitalBuffers } from '../gl/chapters/orbitals/sampler.worker';
 
 export interface AppOptions {
@@ -30,13 +31,18 @@ export interface AppOptions {
 }
 
 /** Deterministic scenes for screenshots (`?capture=…`) — see scripts/capture.mjs. */
-const CAPTURES: Record<string, { blackhole?: number; entry?: number; orbital?: number; zoom?: number; time: number }> = {
+const CAPTURES: Record<string, { blackhole?: number; burst?: number; flash?: number; entry?: number; orbital?: number; zoom?: number; time: number }> = {
   og: { blackhole: 0.02, time: 14 },
   hero: { blackhole: 0, time: 14 },
   fall: { blackhole: 0.7, time: 20 },
   dive: { blackhole: 0.88, time: 20 },
   dive2: { blackhole: 0.93, time: 20 },
   dive3: { blackhole: 0.975, time: 20 },
+  point: { blackhole: 0.997, time: 20 },
+  flash: { blackhole: 1, burst: 0.07, flash: 1, time: 20 },
+  burst15: { blackhole: 1, burst: 0.16, flash: 0.84, time: 20 },
+  burst: { blackhole: 1, burst: 0.28, flash: 0.45, time: 20 },
+  burst2: { blackhole: 1, burst: 0.55, time: 20 },
   quantum: { blackhole: 1, entry: 1, orbital: 1, time: 30 },
   quantum2: { blackhole: 1, entry: 1, orbital: 2, time: 30 },
   photon1: { blackhole: 1, entry: 1, orbital: 1.7, time: 30 },
@@ -52,6 +58,9 @@ export class App {
   blackhole!: BlackHole;
   orbitals: Orbitals | null = null;
   galaxy: Galaxy | null = null;
+  private readonly flash = new Flash();
+  private lastScale = NaN;
+  private blur = 0;
   readonly director = new Director();
   readonly hud = new Hud();
   private composer!: Composer;
@@ -140,7 +149,7 @@ export class App {
     this.galaxy = new Galaxy(this.tier.galaxyStars);
     onProgress(0.72);
 
-    this.chapters = [this.blackhole, this.orbitals, this.galaxy];
+    this.chapters = [this.blackhole, this.orbitals, this.galaxy, this.flash];
     this.composer = new Composer(renderer, this.tier, () => this.active);
 
     // compile the particle programs up-front to avoid hitches when the chapters first appear
@@ -158,6 +167,7 @@ export class App {
     }
     onProgress(1);
 
+    if (this.capture) this.blackhole.startIntro(true);
     if (params.has('debug')) void this.attachDebug();
     if (this.capture) (window as unknown as { __captureReady?: boolean }).__captureReady = false;
   }
@@ -273,11 +283,17 @@ export class App {
     });
   }
 
+  /** Opening camera move; instant for reduced motion and captures. */
+  startIntro() {
+    this.blackhole.startIntro(this.opts.reduced || this.capture !== null);
+  }
+
   /** Called once per animation frame. */
   frame(dt: number) {
     if (this.lost) return;
     const dtc = Math.min(dt, 1 / 20);
-    if (this.dynres.update(dt * 1000) && this.tier.name !== 'low') {
+    // only the tracer's cost is managed; freeze the controller while the black hole isn't drawn
+    if (this.blackhole.weight > 0.01 && this.dynres.update(dt * 1000) && this.tier.name !== 'low') {
       // persistently overloaded at minimum resolution: lower the tracer's caps
       this.tier = { ...TIERS[lowerTier(this.tier.name)], orbitalParticles: this.tier.orbitalParticles };
       this.dynres.max = this.tier.bhScale;
@@ -293,11 +309,13 @@ export class App {
     const cap = this.capture;
     if (cap) {
       j.blackhole = cap.blackhole ?? j.blackhole;
+      j.burst = cap.burst ?? (cap.entry ? 1 : 0);
+      j.flash = cap.flash ?? 0;
       j.entry = cap.entry ?? 0;
       j.orbital = cap.orbital ?? 0;
       j.zoom = cap.zoom ?? 0;
-      j.blackholeWeight = j.blackhole >= 0.99 ? 0 : 1;
-      j.orbitalWeight = j.entry > 0 && j.zoom < 0.2 ? 1 : 0;
+      j.blackholeWeight = 1 - smoothstep(0.02, 0.16, j.burst);
+      j.orbitalWeight = j.burst > 0 && j.zoom < 0.2 ? 1 : 0;
       j.galaxyWeight = j.zoom > 0.25 ? 1 : 0;
       this.time = cap.time;
     } else this.time += dt;
@@ -315,13 +333,15 @@ export class App {
     bh.progress = j.blackhole;
     bh.weight = bh.observing ? 1 : j.blackholeWeight;
     if (this.orbitals) {
-      this.orbitals.setJourney(j.entry, j.orbital, j.zoom);
+      this.orbitals.setJourney(j.entry, j.orbital, j.zoom, j.burst);
       this.orbitals.weight = j.orbitalWeight;
     }
     if (this.galaxy) {
       this.galaxy.zoom = j.zoom;
       this.galaxy.weight = j.galaxyWeight;
     }
+    this.flash.weight = j.flash;
+    this.flash.progress = j.burst;
 
     this.active = warmup ? this.chapters : this.chapters.filter((c) => c.weight > 0.002);
     // cameras keep easing while a chapter is invisible (cheap, CPU-only), so returning is seamless
@@ -334,7 +354,17 @@ export class App {
     const scale = this.director.scaleLog(bh.fieldOfViewLog10(), orb?.fieldOfViewLog10() ?? -8.7, gal?.fieldOfViewLog10() ?? 21);
     this.hud.setScale(scale);
     this.hud.setChapter(j.chapter);
-    if (j.zoom > 0 && gal) this.hud.setZoom(gal.fieldOfViewLog10());
+    if (j.zoom > 0 && gal) this.hud.setCounter('zoom', gal.fieldOfViewLog10());
+    else this.hud.setCounter('inter', scale);
+
+    // zoom blur from the rate of change of scale (orders of magnitude per second)
+    if (!warmup && !cap && dt > 0) {
+      const rate = Number.isFinite(this.lastScale) ? Math.abs(scale - this.lastScale) / dt : 0;
+      const target = this.opts.reduced ? 0 : Math.min(0.16, Math.max(0, rate - 0.6) * 0.0065);
+      this.blur += (target - this.blur) * damp(target > this.blur ? 14 : 5, dt);
+      this.composer.setZoomBlur(this.blur);
+    }
+    this.lastScale = scale;
     if (orb) this.hud.setOrbital(j.orbital);
     let readouts: Readout[] = bh.readouts();
     if (j.zoom > 0.22 && gal) readouts = gal.readouts();

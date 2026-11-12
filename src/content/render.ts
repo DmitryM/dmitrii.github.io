@@ -237,7 +237,7 @@ function renderRole(r: Role, i: number, roles: Role[], loc: Locale): string {
 export function renderBody(loc: Locale = 'en'): string {
   const ui = UI[loc];
   const t = site.text[loc];
-  const { hero, about, experience, contact, chapters, person, footer, zoom } = t;
+  const { hero, about, experience, chapters, person, footer } = t;
   const roles = rolesFor(loc);
   const links = contactLinks(site.links, loc);
   const linkedin = links.find((l) => l.id === 'linkedin');
@@ -255,7 +255,7 @@ export function renderBody(loc: Locale = 'en'): string {
   <div class="poster" aria-hidden="true"></div>
   <div class="loader" id="loader" role="status" aria-live="polite">
     <svg class="loader__wave" viewBox="0 0 480 140" aria-hidden="true"><path class="loader__envelope" d="" /><path class="loader__psi" d="" /></svg>
-    <p class="loader__label"><span class="loader__text" data-done="${esc(ui.loaderDone)}">${esc(ui.loader)}</span><span class="loader__pct" data-loader-pct>0%</span></p>
+    <p class="loader__label"><span class="loader__text">${esc(ui.loader)}</span><span class="loader__pct" data-loader-pct>0%</span></p>
   </div>
 
   <header class="hud" aria-label="${esc(person.name)}">
@@ -276,7 +276,6 @@ export function renderBody(loc: Locale = 'en'): string {
     <section class="chapter hero" id="horizon" aria-labelledby="hero-title">
       <div class="hero__sticky">
         <div class="hero__content">
-          <p class="kicker" data-reveal>${esc(hero.kicker)}</p>
           <h1 class="hero__name" id="hero-title"><span class="hero__first" data-split>${esc(person.givenName)}</span> <span class="hero__last" data-split>${esc(
             person.familyName,
           )}</span></h1>
@@ -295,20 +294,22 @@ export function renderBody(loc: Locale = 'en'): string {
       <div class="about__track">
       <div class="about__sticky">
         <div class="about__content">
-          <p class="kicker" data-reveal>${esc(about.kicker)}</p>
-          <h2 class="visually-hidden" id="about-title">${esc(ui.aboutHeading)}</h2>
+          <h2 class="kicker" id="about-title" data-reveal>${esc(chapters[1]!.title)}</h2>
           <p class="about__lead" data-split-lines>${esc(about.lead)}</p>
-          <p class="about__follow" data-reveal>${esc(about.follow)}</p>
         </div>
       </div>
       </div>
-      <div class="interstitial"><p class="interstitial__text" data-split-lines>${esc(about.interstitial)}</p></div>
+      <div class="interstitial" aria-hidden="true">
+        <div class="counter">
+          <p class="counter__scale" data-counter-scale>10<sup>${num(13.4, 1, loc)}</sup> ${ui.units.m}</p>
+          <p class="counter__object" data-counter-object>${esc(ui.objects[10]!)}</p>
+        </div>
+      </div>
     </section>
 
     <section class="chapter experience" id="experience" aria-labelledby="experience-title">
       <header class="experience__head">
-        <p class="kicker" data-reveal>${esc(experience.kicker)}</p>
-        <h2 class="experience__title" id="experience-title" data-split-lines>${esc(experience.title)}</h2>
+        <h2 class="experience__title" id="experience-title" data-split-lines>${esc(chapters[2]!.title)}</h2>
         <p class="experience__note" data-reveal>${esc(experience.note)}</p>
       </header>
       <div class="experience__body">
@@ -325,17 +326,14 @@ export function renderBody(loc: Locale = 'en'): string {
 
     <section class="chapter contact" id="contact" aria-labelledby="contact-title">
       <div class="zoom" aria-hidden="true">
-        <div class="zoom__sticky">
-          <p class="zoom__caption">${esc(zoom.caption)}</p>
-          <p class="zoom__scale" data-zoom-scale>10<sup>−9</sup> ${ui.units.m}</p>
-          <p class="zoom__object" data-zoom-object>${esc(ui.objects[0]!)}</p>
+        <div class="zoom__sticky counter">
+          <p class="counter__scale" data-zoom-scale>10<sup>${num(-8.7, 1, loc)}</sup> ${ui.units.m}</p>
+          <p class="counter__object" data-zoom-object>${esc(ui.objects[0]!)}</p>
         </div>
       </div>
       <div class="contact__body">
         <div class="contact__content">
-          <p class="kicker" data-reveal>${esc(contact.kicker)}</p>
-          <h2 class="contact__title" id="contact-title" data-split-lines>${esc(contact.title)}</h2>
-          <p class="contact__text" data-reveal>${esc(contact.text)}</p>
+          <h2 class="contact__title" id="contact-title" data-split-lines>${esc(chapters[3]!.title)}</h2>
           <ul class="links" data-reveal>${links.map((l) => `<li>${renderLink(l)}</li>`).join('')}</ul>
         </div>
       </div>
@@ -343,10 +341,7 @@ export function renderBody(loc: Locale = 'en'): string {
   </main>
 
   <footer class="footer">
-    <p class="footer__line">© ${site.year} ${esc(person.name)} <span aria-hidden="true">·</span> ${esc(person.location)} <span aria-hidden="true">·</span> <span class="footer__coords">${esc(
-      ui.coords(site.person.coords.lat, site.person.coords.lon),
-    )}</span></p>
-    <p class="footer__note">${esc(footer.note)}</p>
+    <p class="footer__line">© ${site.year} ${esc(person.name)} <span aria-hidden="true">·</span> ${esc(person.location)}</p>
     <a class="footer__back" href="#horizon">${esc(footer.back)} <span aria-hidden="true">↑</span></a>
   </footer>
 

@@ -101,7 +101,7 @@ export class Motion {
       { opacity: 1, ease: 'none', scrollTrigger: { trigger: '.about__track', start: 'top 70%', end: 'top 10%', scrub: true } },
     );
     // interstitial line and zoom counter fade with their scroll windows
-    for (const sel of ['.interstitial__text', '.zoom__sticky']) {
+    for (const sel of ['.interstitial .counter', '.zoom__sticky']) {
       const trigger = sel === '.zoom__sticky' ? '.zoom' : '.interstitial';
       gsap
         .timeline({ scrollTrigger: { trigger, start: 'top 80%', end: 'bottom 20%', scrub: true } })

@@ -122,6 +122,7 @@ export class Galaxy implements Chapter {
   private readonly stars: Points<BufferGeometry, ShaderMaterial>;
   private readonly dust: Points<BufferGeometry, ShaderMaterial>;
   private readonly background: Points<BufferGeometry, ShaderMaterial>;
+  private readonly deepField: Points<BufferGeometry, ShaderMaterial>;
   private readonly core: Mesh<PlaneGeometry, ShaderMaterial>;
   private readonly hero: Mesh<PlaneGeometry, ShaderMaterial>;
   private readonly uniforms;
@@ -269,6 +270,49 @@ export class Galaxy implements Chapter {
     );
     this.background.frustumCulled = false;
 
+    // ── deep field: faint, distant galaxies of every shape and inclination ──
+    const nDeep = 140;
+    const dGeo = new BufferGeometry();
+    const dPos = new Float32Array(nDeep * 3);
+    const dCol = new Float32Array(nDeep * 3);
+    const dShape = new Float32Array(nDeep * 3); // size px, axis ratio, position angle
+    for (let i = 0; i < nDeep; i++) {
+      const z = rand() * 2 - 1;
+      const t = rand() * Math.PI * 2;
+      const s = Math.sqrt(1 - z * z);
+      dPos.set([s * Math.cos(t) * 1400, z * 1400, s * Math.sin(t) * 1400], i * 3);
+      const elliptical = rand() < 0.35;
+      const c = elliptical ? starColor(3600 + 900 * rand()) : starColor(5200 + 5000 * rand());
+      const b = 0.05 + 0.18 * Math.pow(rand(), 3);
+      dCol.set([c[0] * b, c[1] * b, c[2] * b], i * 3);
+      dShape.set([2.5 + 9 * Math.pow(rand(), 3), elliptical ? 0.55 + 0.4 * rand() : 0.15 + 0.6 * rand(), rand() * Math.PI], i * 3);
+    }
+    dGeo.setAttribute('position', new BufferAttribute(dPos, 3));
+    dGeo.setAttribute('aColor', new BufferAttribute(dCol, 3));
+    dGeo.setAttribute('aShape', new BufferAttribute(dShape, 3));
+    this.deepField = new Points(
+      dGeo,
+      new ShaderMaterial({
+        glslVersion: GLSL3,
+        vertexShader: `in vec3 aColor; in vec3 aShape; out vec3 vColor; out vec3 vShape; uniform float uFade; uniform float uDpr;
+          void main(){ vColor = aColor * uFade; vShape = aShape; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_PointSize = aShape.x * uDpr; }`,
+        fragmentShader: `in vec3 vColor; in vec3 vShape; out vec4 fragColor;
+          void main(){
+            vec2 c = gl_PointCoord * 2.0 - 1.0;
+            float a = vShape.z; c = mat2(cos(a), -sin(a), sin(a), cos(a)) * c; c.y /= vShape.y;
+            float d = dot(c, c); if (d > 1.0) discard;
+            float core = exp(-d * 9.0) + 0.35 * exp(-d * 2.5);
+            fragColor = vec4(vColor * core, 1.0);
+          }`,
+        uniforms: { uFade: { value: 1 }, uDpr: { value: 1 } },
+        blending: AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+      }),
+    );
+    this.deepField.frustumCulled = false;
+
     const glowMat = (color: [number, number, number], core: number) =>
       new ShaderMaterial({
         glslVersion: GLSL3,
@@ -286,7 +330,7 @@ export class Galaxy implements Chapter {
     this.hero = new Mesh(new PlaneGeometry(1, 1), glowMat([sun[0], sun[1], sun[2]], 140));
     this.hero.frustumCulled = false;
 
-    this.scene.add(this.background, this.stars, this.dust, this.core, this.hero);
+    this.scene.add(this.deepField, this.background, this.stars, this.dust, this.core, this.hero);
     this.dust.renderOrder = 1;
     this.core.renderOrder = 2;
     this.hero.renderOrder = 3;
@@ -310,6 +354,9 @@ export class Galaxy implements Chapter {
     (this.dust.material.uniforms.uMaxPx as { value: number }).value = 60 * f.dpr;
     (this.dust.material.uniforms.uIntensity as { value: number }).value = smoothstep(0.35, 0.7, z) * this.weight;
     (this.background.material.uniforms.uFade as { value: number }).value = this.weight;
+    const df = this.deepField.material.uniforms as { uFade: { value: number }; uDpr: { value: number } };
+    df.uFade.value = this.weight;
+    df.uDpr.value = f.dpr;
 
     galaxyOrbit(HERO.a, HERO.phase, f.time, this.heroPos);
 
@@ -378,12 +425,11 @@ export class Galaxy implements Chapter {
       [r.vrot, `≈ 220 ${u.kms} · ${r.flat}`],
       [r.radius, `≈ 50 ${u.kly}`],
       [r.arms, r.densityWave],
-      ['⇒', r.darkHalo],
     ];
   }
 
   dispose() {
-    for (const o of [this.stars, this.dust, this.background]) {
+    for (const o of [this.stars, this.dust, this.background, this.deepField]) {
       o.geometry.dispose();
       o.material.dispose();
     }

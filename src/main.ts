@@ -72,6 +72,7 @@ async function start() {
   });
   root.classList.add('gl-ready');
   await loader.done();
+  app.startIntro();
   motion.intro();
   motion.refresh();
   app.director.measure();

@@ -9,6 +9,10 @@ export interface Journey {
   /** chapters I–II: 0 = hero, 1 = at the horizon */
   blackhole: number;
   blackholeWeight: number;
+  /** singularity → quantum vacuum: the shrunken sky flashes and bursts outward, 0…1 */
+  burst: number;
+  /** flash intensity of the hand-over (0…1, peaks early in the burst) */
+  flash: number;
   /** vacuum → first eigenstate, 0…1 */
   entry: number;
   /** continuous state index: 0 vacuum, 1…n roles */
@@ -40,6 +44,8 @@ export class Director {
   readonly journey: Journey = {
     blackhole: 0,
     blackholeWeight: 1,
+    burst: 0,
+    flash: 0,
     entry: 0,
     orbital: 0,
     orbitalWeight: 0,
@@ -80,8 +86,11 @@ export class Director {
 
     // I–II: from the top of the page until the about track releases its sticky panel
     const bh = clamp(scroll / Math.max(1, m.aboutEnd - vh));
-    // vacuum condenses into the first eigenstate between the interstitial line and the first card
-    const entryStart = m.interTop - vh * 0.15;
+    // the moment the plunge completes, the remaining point of sky flashes and bursts into the vacuum
+    const burstStart = m.aboutEnd - vh;
+    const burst = clamp((scroll - burstStart) / (vh * 0.55));
+    // …which then condenses into the first eigenstate before the first card arrives
+    const entryStart = m.interTop + m.interH * 0.32 - vh * 0.5;
     const entryEnd = (m.roleCenters[0] ?? m.interTop + m.interH) - vh * 0.5;
     const entry = clamp((scroll - entryStart) / Math.max(1, entryEnd - entryStart));
     // each subsequent card triggers a downward transition while it enters the viewport
@@ -94,17 +103,20 @@ export class Director {
 
     if (this.reduced) {
       j.blackhole = bh < 0.98 ? 0 : 1;
+      j.burst = burst > 0.5 ? 1 : 0;
       j.entry = entry > 0.5 ? 1 : 0;
       j.orbital = Math.round(orbital);
       j.zoom = zoom > 0.5 ? 1 : 0;
     } else {
       j.blackhole = bh;
+      j.burst = burst;
       j.entry = entry;
       j.orbital = orbital;
       j.zoom = zoom;
     }
-    j.blackholeWeight = 1 - smoothstep(0.955, 0.998, bh);
-    j.orbitalWeight = smoothstep(0, 0.04, entry) * (1 - smoothstep(0.17, 0.26, zoom));
+    j.flash = this.reduced ? 0 : smoothstep(0, 0.07, j.burst) * (1 - smoothstep(0.07, 0.42, j.burst));
+    j.blackholeWeight = 1 - smoothstep(0.02, 0.16, j.burst);
+    j.orbitalWeight = smoothstep(0.08, 0.2, j.burst) * (1 - smoothstep(0.17, 0.26, zoom));
     j.galaxyWeight = smoothstep(0.1, 0.26, zoom);
 
     const probe = scroll + vh * 0.5;
@@ -123,7 +135,9 @@ export class Director {
   scaleLog(bh: number, atom: number, galaxy: number): number {
     const j = this.journey;
     if (j.zoom > 0) return galaxy;
-    if (j.entry > 0) return lerp(bh, atom, easeInOutCubic(j.entry));
+    // the sky shrinks to a point, then the counter sweeps down to atomic scale as the vacuum condenses
+    const sweep = clamp(j.burst * 0.35 + j.entry * 0.65);
+    if (sweep > 0) return lerp(bh, atom, easeInOutCubic(sweep));
     return bh;
   }
 }

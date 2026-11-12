@@ -25,6 +25,9 @@ import particlesVert from './particles.vert';
 import particlesFrag from './particles.frag';
 import photonVert from './photon.vert';
 import photonFrag from './photon.frag';
+import ringFrag from './ring.frag';
+import glowVert from '../galaxy/glow.vert';
+import glowFrag from '../galaxy/glow.frag';
 
 const A0 = 5.29177210903e-11; // Bohr radius [m]
 const DEG = Math.PI / 180;
@@ -58,6 +61,10 @@ export class Orbitals implements Chapter {
 
   private readonly points: Points<BufferGeometry, ShaderMaterial>;
   private readonly photon: Mesh<PlaneGeometry, ShaderMaterial>;
+  private readonly nucleus: Mesh<PlaneGeometry, ShaderMaterial>;
+  private readonly ring: Mesh<PlaneGeometry, ShaderMaterial>;
+  private burst = 1;
+  private pulse = 0;
   private readonly radii: number[];
   private readonly elevations: number[];
 
@@ -104,6 +111,8 @@ export class Orbitals implements Chapter {
         uShrink: { value: 1 },
         uIntensity: { value: 0 },
         uFlight: { value: 1 },
+        uBurst: { value: 0 },
+        uPulse: { value: 0 },
         uColorPos: { value: new Vector3(1.0, 0.5, 0.17) },
         uColorNeg: { value: new Vector3(0.16, 0.52, 1.0) },
         uColorVac: { value: new Vector3(0.55, 0.62, 0.85) },
@@ -144,12 +153,27 @@ export class Orbitals implements Chapter {
     this.photon.visible = false;
     this.scene.add(this.photon);
 
+    // the proton: a tiny, very bright point at the centre of every eigenstate
+    const billboard = (frag: string, uniforms: Record<string, { value: unknown }>) => {
+      const m = new Mesh(
+        new PlaneGeometry(1, 1),
+        new ShaderMaterial({ glslVersion: GLSL3, vertexShader: glowVert, fragmentShader: frag, uniforms, blending: AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }),
+      );
+      m.frustumCulled = false;
+      this.scene.add(m);
+      return m;
+    };
+    this.nucleus = billboard(glowFrag, { uScale: { value: 1 }, uColor: { value: new Vector3(1, 0.9, 0.85) }, uIntensity: { value: 0 }, uCore: { value: 260 } });
+    this.ring = billboard(ringFrag, { uScale: { value: 1 }, uColor: { value: new Vector3(1, 0.2, 0.2) }, uRadius: { value: 0 }, uWidth: { value: 0.02 }, uIntensity: { value: 0 } });
+    this.ring.visible = false;
+
     this.radii = roles.map((r) => meanRadius(r.state.n, r.state.l));
     this.elevations = roles.map((r) => preferredElevation(r.state));
     this.stageEl = document.querySelector('[data-orbital-stage]');
   }
 
-  setJourney(entry: number, state: number, zoom: number) {
+  setJourney(entry: number, state: number, zoom: number, burst = 1) {
+    this.burst = burst;
     this.entry = entry;
     this.state = state;
     this.zoom = zoom;
@@ -180,6 +204,7 @@ export class Orbitals implements Chapter {
     this.time = f.time;
     const u = this.points.material.uniforms;
     u.uState!.value = this.state;
+    u.uBurst!.value = this.burst;
     u.uTime!.value = f.time;
     u.uViewportH!.value = this.bufferH;
     u.uPointPx!.value = 1.5 * this.dpr;
@@ -214,7 +239,7 @@ export class Orbitals implements Chapter {
     this.camera.lookAt(0, 0, 0);
 
     // the vacuum fills the whole frame; the condensed atom moves into its stage
-    const settle = smoothstep(0.2, 1, this.entry);
+    const settle = smoothstep(0.2, 1, this.entry) * (1 - smoothstep(0, 0.1, this.zoom));
     const offX = -(this.stage.x - 0.5) * this.cssW * settle;
     const offY = -(this.stage.y - 0.5) * this.cssH * settle;
     this.camera.setViewOffset(this.cssW, this.cssH, offX, offY, this.cssW, this.cssH);
@@ -225,6 +250,12 @@ export class Orbitals implements Chapter {
     u.uIntensity!.value = this.baseIntensity() * this.weight;
 
     this.updatePhoton(rMean);
+    u.uPulse!.value = this.pulse;
+
+    // nucleus: visible once the atom has formed, flares with each jump
+    const nu = this.nucleus.material.uniforms;
+    nu.uScale!.value = this.dist * 0.035;
+    nu.uIntensity!.value = (0.5 + 2.2 * this.pulse) * smoothstep(0.5, 1, this.entry) * this.weight * shrink;
   }
 
   private baseIntensity() {
@@ -240,6 +271,8 @@ export class Orbitals implements Chapter {
     const pu = this.photon.material.uniforms;
     if (this.state < 1 || seg >= this.roles.length - 1 || t < 0.28 || t > 0.999) {
       this.photon.visible = false;
+      this.ring.visible = false;
+      this.pulse = 0;
       return;
     }
     const upper = this.roles[seg]!.state.n;
@@ -270,6 +303,19 @@ export class Orbitals implements Chapter {
     this.photon.quaternion.copy(new Quaternion().setFromRotationMatrix(m));
     this.photon.position.set(0, 0, 0);
     this.photon.visible = true;
+
+    // the jump: the cloud and nucleus flare, and a spherical wavefront races outward
+    this.pulse = 0.9 * Math.exp(-Math.pow((t - 0.42) / 0.1, 2)) * (visible ? 1 : 0.7);
+    const rw = clamp((t - 0.36) / 0.64);
+    const ru = this.ring.material.uniforms;
+    ru.uScale!.value = rMean * 5.5;
+    ru.uRadius!.value = 0.04 + 0.92 * (1 - Math.pow(1 - rw, 2));
+    ru.uWidth!.value = 0.006 + 0.014 * rw;
+    ru.uIntensity!.value = (visible ? 0.6 : 0.35) * Math.pow(1 - rw, 2) * smoothstep(0, 0.06, rw) * this.weight;
+    (ru.uColor!.value as Vector3).set(c[0]!, c[1]!, c[2]!);
+    this.ring.visible = rw > 0 && rw < 1;
+    const nc = this.nucleus.material.uniforms.uColor!.value as Vector3;
+    nc.set(1, 0.9, 0.85).lerp(new Vector3(c[0]!, c[1]!, c[2]!), Math.min(1, this.pulse));
   }
 
   draw(renderer: WebGLRenderer) {
@@ -312,7 +358,9 @@ export class Orbitals implements Chapter {
   dispose() {
     this.points.geometry.dispose();
     this.points.material.dispose();
-    this.photon.geometry.dispose();
-    this.photon.material.dispose();
+    for (const m of [this.photon, this.nucleus, this.ring]) {
+      m.geometry.dispose();
+      m.material.dispose();
+    }
   }
 }

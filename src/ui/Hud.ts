@@ -40,8 +40,10 @@ export class Hud {
   private readonly scaleHuman = document.querySelector<HTMLElement>('[data-scale-human]');
   private readonly readoutsEl = document.querySelector<HTMLElement>('[data-readouts]');
   private readonly rail = [...document.querySelectorAll<HTMLAnchorElement>('[data-rail]')];
-  private readonly zoomScale = document.querySelector<HTMLElement>('[data-zoom-scale]');
-  private readonly zoomObject = document.querySelector<HTMLElement>('[data-zoom-object]');
+  private readonly counters = {
+    inter: { scale: document.querySelector<HTMLElement>('[data-counter-scale]'), object: document.querySelector<HTMLElement>('[data-counter-object]'), last: '' },
+    zoom: { scale: document.querySelector<HTMLElement>('[data-zoom-scale]'), object: document.querySelector<HTMLElement>('[data-zoom-object]'), last: '' },
+  };
   private readonly electron = document.querySelector<SVGCircleElement>('[data-electron]');
   private readonly levels = [...document.querySelectorAll<SVGGElement>('.lv[data-level]')];
   private readonly transitions = [...document.querySelectorAll<SVGGElement>('[data-transition]')];
@@ -54,7 +56,6 @@ export class Hud {
   private lastHuman = '';
   private lastReadouts = '';
   private lastReadoutTime = 0;
-  private lastZoom = '';
   private lastActive = -2;
 
   constructor() {
@@ -92,12 +93,14 @@ export class Hud {
     }
   }
 
-  setZoom(log10: number) {
+  /** Powers-of-Ten counters: the singularity→atom sweep ("inter") and the atom→galaxy pull-back ("zoom"). */
+  setCounter(which: 'inter' | 'zoom', log10: number) {
+    const c = this.counters[which];
     const key = log10.toFixed(1);
-    if (key === this.lastZoom) return;
-    this.lastZoom = key;
-    if (this.zoomScale) this.zoomScale.innerHTML = fmtExp(log10, this.loc);
-    if (this.zoomObject) this.zoomObject.textContent = objectAtScale(log10, this.loc);
+    if (key === c.last) return;
+    c.last = key;
+    if (c.scale) c.scale.innerHTML = fmtExp(log10, this.loc);
+    if (c.object) c.object.textContent = objectAtScale(log10, this.loc);
   }
 
   setReadouts(list: Readout[], now: number) {

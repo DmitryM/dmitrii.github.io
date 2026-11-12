@@ -2,17 +2,18 @@
 
 Personal site of **Dmitrii Malikov**, Software Engineer in Barcelona. It is a real-time, scroll-driven journey across 34 orders of magnitude, rendered with three.js. The physics behind every image is real.
 
-| Chapter | Scene | Scale |
+| Section | Scene | Scale |
 |---|---|---|
-| I · Event Horizon | Ray-traced Schwarzschild black hole | 10¹⁴ m |
-| II · Singularity | The fall through the photon sphere, looking back at the shrinking sky | → 10¹³ m |
-| III · Quantum Leaps | Hydrogen eigenstates: one role = one energy level | 10⁻⁹ m |
-| IV · Contact | A Powers-of-Ten pull-back to a density-wave spiral galaxy | 10²¹ m |
+| Intro | Ray-traced Schwarzschild black hole, with an opening camera arrival | 10¹⁴ m |
+| About | The plunge: the sky shrinks to a single point behind the falling observer, flashes, and bursts into the quantum vacuum while a scale counter sweeps down | 10¹³ → 10⁻⁹ m |
+| Experience | Hydrogen eigenstates, one role per energy level; each jump flares the cloud and sends out a photon and its wavefront | 10⁻⁹ m |
+| Contact | A Powers-of-Ten pull-back to a density-wave spiral galaxy, with zoom blur driven by the rate of change of scale | 10²¹ m |
 
 ## The physics
 
 ### Black hole (`src/gl/chapters/blackhole/blackhole.frag`)
 - **Geodesics.** Each pixel traces a null geodesic of the Schwarzschild metric, written as `x'' = −(3/2) h² x / r⁵` and integrated with RK4 and an adaptive step.
+- **Observer.** The camera is a static observer, so its ray directions get gravitational aberration (tan ψ = tan α / √(1 − r_s/r)). That is what squeezes the sky into a point at the horizon.
 - **Disk images.** The thin disk is sampled at every crossing of its mid-plane, so the primary, secondary and higher-order images all appear.
 - **Photon ring.** It is supersampled only where the impact parameter is close to b = 3√3/2 r_s, about 2% of the pixels.
 - **Disk physics:**

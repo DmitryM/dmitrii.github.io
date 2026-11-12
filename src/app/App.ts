@@ -152,7 +152,8 @@ export class App {
     this.chapters = [this.blackhole, this.orbitals, this.galaxy, this.flash];
     this.composer = new Composer(renderer, this.tier, () => this.active);
 
-    // compile the particle programs up-front to avoid hitches when the chapters first appear
+    // compile every program up-front (including ones that only appear mid-journey) to avoid hitches
+    this.orbitals.showAllForCompile();
     await Promise.all([renderer.compileAsync(this.orbitals.scene, this.orbitals.camera), renderer.compileAsync(this.galaxy.scene, this.galaxy.camera)]);
     onProgress(0.86);
 
@@ -160,11 +161,15 @@ export class App {
     this.observe();
     this.director.measure();
 
-    // warm-up frames (uploads buffers, allocates targets) while the loader is still visible
+    // warm-up frames (uploads buffers, allocates targets, links the lazily-built post passes)
+    // while the loader is still visible
     for (let i = 0; i < 2; i++) {
       this.renderAll(1 / 60, true);
+      this.composer.setZoomBlur(0.01);
+      this.composer.render(1 / 60);
       await new Promise((r) => requestAnimationFrame(r));
     }
+    this.composer.setZoomBlur(0);
     onProgress(1);
 
     if (this.capture) this.blackhole.startIntro(true);

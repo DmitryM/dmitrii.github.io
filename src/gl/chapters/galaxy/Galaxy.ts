@@ -13,6 +13,7 @@ import {
   ShaderMaterial,
   Vector3,
   ZeroFactor,
+  DoubleSide,
   AddEquation,
   type WebGLRenderer,
 } from 'three';
@@ -24,6 +25,8 @@ import { UI, clientLocale } from '../../../i18n/index.ts';
 import starsVert from './stars.vert';
 import starsFrag from './stars.frag';
 import dustFrag from './dust.frag';
+import diskVert from './disk.vert';
+import diskFrag from './disk.frag';
 import glowVert from './glow.vert';
 import glowFrag from './glow.frag';
 
@@ -45,8 +48,13 @@ function galaxyOrbit(a: number, phase: number, time: number, out: Vector3) {
 }
 
 /** Trailing logarithmic spiral: azimuth of arm `arm` at radius a. */
+/**
+ * Trailing logarithmic spiral with low-frequency wobble: real arms kink, branch and vary in pitch,
+ * and perfectly regular spirals read as artificial.
+ */
 function armAngle(a: number, arm: number) {
-  return arm * Math.PI - ARM_K * Math.log(a / PARAMS.armA0);
+  const wobble = 0.24 * Math.sin(a * 0.82 + arm * 2.1) + 0.11 * Math.sin(a * 2.3 + arm * 0.7 + 1.3);
+  return arm * Math.PI - ARM_K * Math.log(a / PARAMS.armA0) + wobble;
 }
 
 const bbCache = new Map<number, [number, number, number]>();
@@ -121,6 +129,8 @@ export class Galaxy implements Chapter {
 
   private readonly stars: Points<BufferGeometry, ShaderMaterial>;
   private readonly dust: Points<BufferGeometry, ShaderMaterial>;
+  private readonly haze: Mesh<PlaneGeometry, ShaderMaterial>;
+  private readonly hazeUniforms: Record<string, { value: number }>;
   private readonly background: Points<BufferGeometry, ShaderMaterial>;
   private readonly deepField: Points<BufferGeometry, ShaderMaterial>;
   private readonly core: Mesh<PlaneGeometry, ShaderMaterial>;
@@ -173,15 +183,16 @@ export class Galaxy implements Chapter {
       const a = expo(5.2, 1.2, 24);
       const T = 3100 + 3400 * Math.pow(rand(), 1.4);
       const u = rand();
-      push(L, a, rand() * Math.PI * 2, 0, gaussian(rand) * (0.1 + 0.3 * Math.exp(-a / 3.5)), 0.03, 0.12 + 1.2 * Math.pow(u, 12) + 0.25 * Math.pow(u, 3), starColor(T));
+      push(L, a, rand() * Math.PI * 2, 0, gaussian(rand) * (0.1 + 0.3 * Math.exp(-a / 3.5)), 0.03, 0.2 + 1.2 * Math.pow(u, 12) + 0.3 * Math.pow(u, 3), starColor(T));
     }
     // arm population: young, hot, concentrated along two trailing log spirals
     for (let i = 0; i < nArm; i++) {
       const arm = rand() < 0.5 ? 0 : 1;
       const a = expo(6.5, PARAMS.armA0 + 0.3, 22);
-      const width = 0.35 + 0.05 * a;
-      const spur = rand() < 0.12 ? 3 : 1;
-      const phase = armAngle(a, arm) + (gaussian(rand) * width * spur) / a;
+      const width = 0.42 + 0.07 * a;
+      const k0 = rand();
+      const spread = k0 < 0.55 ? 1 : k0 < 0.88 ? 2.2 : 4; // narrow ridge + broad skirt + spurs
+      const phase = armAngle(a, arm) + (gaussian(rand) * width * spread) / a;
       const k = rand();
       const T = k < 0.55 ? 9000 + 19000 * rand() : k < 0.85 ? 6000 + 3000 * rand() : 4200 + 1800 * rand();
       const u = rand();
@@ -219,10 +230,36 @@ export class Galaxy implements Chapter {
     for (let i = 0; i < nDust; i++) {
       const arm = rand() < 0.5 ? 0 : 1;
       const a = expo(6.5, 2.4, 19);
-      const width = 0.22 + 0.035 * a;
-      push(D, a, armAngle(a, arm) + (0.32 + (gaussian(rand) * width) / a) * 1, 1, gaussian(rand) * 0.04, 0.4 + 0.8 * rand(), 1, [0.08 + 0.08 * rand(), 0, 0]);
+      const width = 0.3 + 0.05 * a;
+      push(D, a, armAngle(a, arm) + 0.24 + (gaussian(rand) * width * (rand() < 0.7 ? 1 : 2)) / a, 1, gaussian(rand) * 0.04, 0.35 + 0.55 * rand(), 1, [0.012 + 0.02 * rand(), 0, 0]);
     }
-    const dustUniforms = { ...this.uniforms, uIntensity: { value: 1 }, uMaxPx: { value: 60 } };
+    // ── unresolved starlight: a smooth surface-brightness map in the disk plane ──
+    this.hazeUniforms = {
+      uTime: this.uniforms.uTime,
+      uPattern: this.uniforms.uPattern,
+      uArmK: { value: ARM_K },
+      uArmA0: { value: PARAMS.armA0 },
+      uIntensity: { value: 0 },
+    };
+    const plane = new PlaneGeometry(60, 60, 1, 1);
+    plane.rotateX(-Math.PI / 2);
+    this.haze = new Mesh(
+      plane,
+      new ShaderMaterial({
+        glslVersion: GLSL3,
+        vertexShader: diskVert,
+        fragmentShader: diskFrag,
+        uniforms: this.hazeUniforms,
+        blending: AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        side: DoubleSide,
+      }),
+    );
+    this.haze.frustumCulled = false;
+
+    const dustUniforms = { ...this.uniforms, uIntensity: { value: 1 }, uMaxPx: { value: 90 } };
     const dustMat = new ShaderMaterial({
       glslVersion: GLSL3,
       vertexShader: starsVert,
@@ -330,7 +367,7 @@ export class Galaxy implements Chapter {
     this.hero = new Mesh(new PlaneGeometry(1, 1), glowMat([sun[0], sun[1], sun[2]], 140));
     this.hero.frustumCulled = false;
 
-    this.scene.add(this.deepField, this.background, this.stars, this.dust, this.core, this.hero);
+    this.scene.add(this.deepField, this.background, this.haze, this.stars, this.dust, this.core, this.hero);
     this.dust.renderOrder = 1;
     this.core.renderOrder = 2;
     this.hero.renderOrder = 3;
@@ -378,6 +415,8 @@ export class Galaxy implements Chapter {
     this.camera.near = Math.max(this.dist * 0.02, 0.0002);
     this.camera.far = 4000;
     this.heroFade = 1 - smoothstep(Math.log(0.03), Math.log(0.4), ld);
+    // the plane is only meaningful from outside the disk (edge-on from inside it would be a line)
+    this.hazeUniforms.uIntensity!.value = 0.28 * smoothstep(Math.log(2), Math.log(20), ld) * this.weight;
 
     // composition: drift the galaxy right of the contact copy at the end (desktop)
     const wide = this.cssW / this.cssH > 1.1;
@@ -429,7 +468,7 @@ export class Galaxy implements Chapter {
   }
 
   dispose() {
-    for (const o of [this.stars, this.dust, this.background, this.deepField]) {
+    for (const o of [this.stars, this.dust, this.background, this.deepField, this.haze]) {
       o.geometry.dispose();
       o.material.dispose();
     }

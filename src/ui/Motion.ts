@@ -118,9 +118,16 @@ export class Motion {
       );
     });
 
-    // hero intro: hidden until the loader collapses
+    // hero intro: split and tuck the name into its masks *now*, while the loader still covers the
+    // page, so it is never visible before its entrance animation
     gsap.set('.hero [data-reveal]', { opacity: 0, y: 18 });
+    this.heroChars = [...document.querySelectorAll<HTMLElement>('.hero [data-split]')].map(
+      (el) => SplitText.create(el, { type: 'chars', charsClass: 'char', mask: 'chars' }).chars as HTMLElement[],
+    );
+    gsap.set(this.heroChars.flat(), { yPercent: 115 });
   }
+
+  private heroChars: HTMLElement[][] = [];
 
   /** Plays once the loader has faded. */
   intro() {
@@ -129,9 +136,8 @@ export class Motion {
       return;
     }
     const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
-    document.querySelectorAll<HTMLElement>('.hero [data-split]').forEach((el, i) => {
-      const split = SplitText.create(el, { type: 'chars', charsClass: 'char', mask: 'chars' });
-      tl.from(split.chars, { yPercent: 115, duration: 1.6, stagger: 0.045 }, 0.1 + i * 0.18);
+    this.heroChars.forEach((chars, i) => {
+      tl.to(chars, { yPercent: 0, duration: 1.6, stagger: 0.045 }, 0.1 + i * 0.18);
     });
     tl.to('.hero [data-reveal]', { opacity: 1, y: 0, duration: 1.2, stagger: 0.12 }, 0.55);
     ScrollTrigger.refresh();

@@ -236,14 +236,16 @@ void main() {
   // The photon ring (rays with impact parameter b ≈ b_c = 3√3/2) is thinner than a pixel and
   // aliases into dashes. Supersample just that annulus with a 4-ray rotated grid (~2% of pixels).
   float b = length(cross(uCamPos, dir));
-  if (abs(b - 2.598) < 0.32 && uLensing > 0.5) {
+  // b changes by ≈ r·pixelAngle per pixel: keep the band a few pixels wide at any distance
+  float bandPx = length(uCamPos) * pixelAngle;
+  if (abs(b - 2.598) < 6.0 * bandPx && uLensing > 0.5) {
     vec2 px = 2.0 / uResolution;
     vec3 col = t.col;
     float vis = t.vis;
     vec3 d = t.dir;
     // standard 8× MSAA pattern (in 1/16 pixel); the outer band uses the first three taps
     const vec2 MS8[7] = vec2[7](vec2(-1.0, 3.0), vec2(5.0, 1.0), vec2(-3.0, -5.0), vec2(-5.0, 5.0), vec2(-7.0, -1.0), vec2(3.0, 7.0), vec2(7.0, -7.0));
-    int taps = abs(b - 2.598) < 0.08 ? 7 : 3;
+    int taps = abs(b - 2.598) < 1.6 * bandPx ? 7 : 3;
     for (int k = 0; k < 7; k++) {
       if (k >= taps) break;
       Trace s = trace(primaryRay(ndc + MS8[k] / 16.0 * px), pixelAngle);

@@ -49,10 +49,11 @@ export class BlackHole implements Chapter {
   weight = 1;
   /** scroll progress through chapters I–II, 0…1 */
   progress = 0;
-  /** dynamic resolution scale (≤ tier.bhScale) */
+  /** dynamic resolution scale (≤ maxScale); changes continuously, never reallocates */
   scale: number;
   /** NDC offset of the hole's centre (composition) */
   readonly lensShift = new Vector2();
+  private maxScale = 1;
 
   // observatory
   observing = false;
@@ -80,6 +81,7 @@ export class BlackHole implements Chapter {
   private incl = 84 * DEG;
   private az = 0;
   private roll = 0;
+  private turn = 0;
   private tanHalfFov = Math.tan(22 * DEG);
   private readonly camPos = new Vector3();
   private readonly fwd = new Vector3();
@@ -94,6 +96,7 @@ export class BlackHole implements Chapter {
     lut: DataTexture,
   ) {
     this.scale = tier.bhScale;
+    this.maxScale = tier.bhScale;
     // MRT: [0] disk emission + sky visibility (half float, filtered), [1] escaped ray direction (float, exact)
     this.target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false, count: 2 });
     const dirTex = this.target.textures[1]!;
@@ -148,6 +151,7 @@ export class BlackHole implements Chapter {
         uColor: { value: this.target.textures[0] },
         uDir: { value: this.target.textures[1] },
         uTexSize: { value: new Vector2(1, 1) },
+        uValid: { value: new Vector2(1, 1) },
         uWeight: { value: 1 },
         uSkyWeight: { value: 1 },
         uSky: { value: this.skyTarget.texture },
@@ -183,6 +187,7 @@ export class BlackHole implements Chapter {
     m.defines.DISK_SAMPLES = tier.diskSamples;
     m.needsUpdate = true;
     this.scale = Math.min(this.scale, tier.bhScale);
+    this.maxScale = tier.bhScale;
   }
 
   /** The tracer material, for async pre-compilation and benchmarking. */
@@ -192,6 +197,7 @@ export class BlackHole implements Chapter {
 
   /** Render the tracer once into a small target (used by the GPU benchmark). */
   benchmarkFrame(target: WebGLRenderTarget) {
+    target.viewport.set(0, 0, target.width, target.height);
     // measure the hero framing, not the far-away arrival shot
     const intro = this.intro;
     this.intro = 1;
@@ -290,6 +296,9 @@ export class BlackHole implements Chapter {
     this.incl += (incl - this.incl) * k;
     this.az += (az - this.az) * k;
     this.roll += (roll - this.roll) * k;
+    // the look-back turn is eased like every other camera parameter (scroll alone is too steppy)
+    const turnTarget = smoothstep(0.78, 0.97, this.progress) * (1 - smoothstep(0, 1, this.obsBlend)) * Math.PI;
+    this.turn += (turnTarget - this.turn) * (dt > 0 ? damp(4.5, dt) : 1);
 
     const st = Math.sin(this.incl);
     this.camPos.set(this.r * st * Math.cos(this.az), this.r * Math.cos(this.incl), this.r * st * Math.sin(this.az));
@@ -299,7 +308,7 @@ export class BlackHole implements Chapter {
     this.up.crossVectors(this.right, this.fwd).normalize();
     // Final plunge: turn to look back out. Inside the photon sphere the whole visible universe
     // is squeezed into a shrinking bright window opposite the hole.
-    const turn = smoothstep(0.78, 0.97, this.progress) * (1 - smoothstep(0, 1, this.obsBlend)) * Math.PI;
+    const turn = this.turn;
     if (turn > 1e-4) {
       const c = Math.cos(turn);
       const s = Math.sin(turn);
@@ -358,16 +367,25 @@ export class BlackHole implements Chapter {
   }
 
   prepare(renderer: WebGLRenderer) {
-    const w = Math.max(2, Math.round(this.bufferW * this.scale));
-    const h = Math.max(2, Math.round(this.bufferH * this.scale));
-    if (this.target.width !== w || this.target.height !== h) this.target.setSize(w, h);
+    // allocated once at the maximum scale; the current scale only sets the viewport inside it
+    const W = Math.max(2, Math.ceil(this.bufferW * this.maxScale));
+    const H = Math.max(2, Math.ceil(this.bufferH * this.maxScale));
+    if (this.target.width !== W || this.target.height !== H) this.target.setSize(W, H);
+    const s = Math.min(this.scale, this.maxScale);
+    const w = Math.min(W, Math.max(2, Math.round(this.bufferW * s)));
+    const h = Math.min(H, Math.max(2, Math.round(this.bufferH * s)));
+    this.target.viewport.set(0, 0, w, h);
+    this.valid.set(w, h);
     this.trace.material.uniforms.uResolution!.value.set(w, h);
     this.trace.render(renderer, this.target);
   }
 
+  private readonly valid = new Vector2(1, 1);
+
   draw(renderer: WebGLRenderer) {
     const u = this.upsample.material.uniforms;
     u.uTexSize!.value.set(this.target.width, this.target.height);
+    u.uValid!.value.copy(this.valid);
     u.uWeight!.value = this.weight;
     renderer.render(this.upsample.scene, this.upsample.camera);
   }

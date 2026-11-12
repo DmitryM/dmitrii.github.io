@@ -172,6 +172,13 @@ export class Orbitals implements Chapter {
     this.stageEl = document.querySelector('[data-orbital-stage]');
   }
 
+  /** Make every mesh visible so pre-compilation covers programs that only appear mid-journey. */
+  showAllForCompile() {
+    this.photon.visible = true;
+    this.ring.visible = true;
+    this.nucleus.visible = true;
+  }
+
   setJourney(entry: number, state: number, zoom: number, burst = 1) {
     this.burst = burst;
     this.entry = entry;

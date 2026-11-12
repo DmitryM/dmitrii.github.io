@@ -111,7 +111,6 @@ export class DynamicResolution {
   private ema = 16.7;
   private refresh = 16.7;
   private samples: number[] = [];
-  private cooldown = 0;
   private overload = 0;
 
   constructor(
@@ -121,7 +120,11 @@ export class DynamicResolution {
     this.scale = max;
   }
 
-  /** @returns true when the device is persistently too slow even at minimum scale */
+  /**
+   * Continuous control: the tracer renders into a sub-viewport of a fixed allocation, so the scale
+   * can move a little every frame without reallocations or visible resolution pops.
+   * @returns true when the device is persistently too slow even at minimum scale
+   */
   update(dtMs: number): boolean {
     if (dtMs <= 0 || dtMs > 250) return false; // tab switches, breakpoints
     if (this.samples.length < 90) {
@@ -131,23 +134,22 @@ export class DynamicResolution {
         this.refresh = Math.max(6.5, sorted[Math.floor(sorted.length * 0.1)]!);
       }
     }
-    this.ema += (dtMs - this.ema) * 0.08;
-    if (this.cooldown > 0) {
-      this.cooldown--;
-      return false;
-    }
+    this.ema += (dtMs - this.ema) * 0.06;
     const budget = this.refresh;
-    if (this.ema > budget * 1.22) {
-      if (this.scale > this.min + 1e-3) {
-        this.scale = Math.max(this.min, this.scale * 0.88);
-        this.cooldown = 24;
-      } else if (++this.overload > 6) {
-        this.overload = 0;
-        return true;
-      } else this.cooldown = 30;
-    } else if (this.ema < budget * 1.04 && this.scale < this.max) {
-      this.scale = Math.min(this.max, this.scale * 1.04);
-      this.cooldown = 45;
+    if (this.ema > budget * 1.15) {
+      // over budget: ease down, faster the further over we are
+      const over = Math.min(this.ema / budget - 1, 1);
+      this.scale = Math.max(this.min, this.scale * (1 - 0.012 - 0.03 * over));
+      if (this.scale <= this.min + 1e-3) {
+        if (++this.overload > 180) {
+          this.overload = 0;
+          return true;
+        }
+      } else this.overload = 0;
+    } else if (this.ema < budget * 1.04) {
+      // comfortably within budget: creep back up
+      this.scale = Math.min(this.max, this.scale * 1.0025);
+      this.overload = 0;
     }
     return false;
   }

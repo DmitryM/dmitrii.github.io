@@ -10,6 +10,7 @@ export class Loader {
   private shown = 0;
   private raf = 0;
   private t0 = performance.now();
+  private last = performance.now();
   private finished = false;
 
   constructor(root: Document = document) {
@@ -26,7 +27,10 @@ export class Loader {
 
   private tick = () => {
     const now = performance.now();
-    this.shown += (this.target - this.shown) * 0.08;
+    // time-based easing: the collapse takes the same time on a 120 Hz screen and a 2 fps renderer
+    const dt = Math.min(0.5, (now - this.last) / 1000);
+    this.last = now;
+    this.shown += (this.target - this.shown) * (1 - Math.exp(-5 * dt));
     if (Math.abs(this.target - this.shown) < 0.002) this.shown = this.target;
     this.draw((now - this.t0) / 1000);
     if (this.pct) this.pct.textContent = `${Math.round(this.shown * 100)}%`;
@@ -64,9 +68,11 @@ export class Loader {
   done(): Promise<void> {
     this.set(1);
     this.finished = true;
+    const deadline = performance.now() + 2000; // never hold the page back on very slow devices
     return new Promise((resolve) => {
       const wait = () => {
-        if (this.shown >= 0.999) {
+        if (this.shown >= 0.999 || performance.now() > deadline) {
+          this.shown = 1;
           setTimeout(() => {
             this.el?.classList.add('is-done');
             setTimeout(() => {

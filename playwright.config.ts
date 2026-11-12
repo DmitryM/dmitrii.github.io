@@ -10,7 +10,12 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: 'http://localhost:4173',
-    launchOptions: { args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu'] },
+    // PW_SWIFTSHADER=1 reproduces CI locally: software WebGL instead of the real GPU
+    launchOptions: {
+      args: process.env.PW_SWIFTSHADER
+        ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-gpu']
+        : ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-gpu'],
+    },
   },
   // locally: the system Chrome (real GPU); in CI: Playwright's Chromium with SwiftShader
   projects: [
@@ -19,7 +24,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         // CI renders with SwiftShader (CPU): keep the ray tracer's pixel count modest there
-        viewport: process.env.CI ? { width: 960, height: 600 } : { width: 1280, height: 800 },
+        viewport: process.env.CI || process.env.PW_SWIFTSHADER ? { width: 960, height: 600 } : { width: 1280, height: 800 },
         ...(process.env.CI ? {} : { channel: 'chrome' }),
       },
     },

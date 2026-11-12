@@ -51,11 +51,13 @@ void main() {
   float mottle = fbm(q * 0.55);
   float clumps = fbm(q * 1.4 + 11.0);
   arms *= 0.55 + 0.9 * clumps;
-  float dust = 1.0 - 0.45 * lane * (0.3 + 0.9 * mottle) * smoothstep(2.0, 4.0, r);
+  // a faint, smooth dimming and reddening on the inner edge of the arms — no hard black lanes
+  float dust = 1.0 - 0.18 * lane * (0.5 + 0.5 * mottle) * smoothstep(3.0, 6.0, r);
 
   vec3 warm = vec3(1.0, 0.8, 0.6);
   vec3 young = vec3(0.72, 0.82, 1.0);
   vec3 core = vec3(1.0, 0.82, 0.62);
-  vec3 col = (warm * disk * (0.6 + 0.8 * mottle) * 0.8 + young * arms * 0.5) * dust + core * bulge * 2.0;
+  vec3 redden = mix(vec3(1.0), vec3(1.0, 0.86, 0.74), 1.0 - dust);
+  vec3 col = (warm * disk * (0.6 + 0.8 * mottle) * 0.8 + young * arms * 0.5) * dust * redden + core * bulge * 2.0;
   fragColor = vec4(col * uIntensity, 1.0);
 }

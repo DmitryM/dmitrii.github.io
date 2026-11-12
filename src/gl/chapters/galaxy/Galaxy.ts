@@ -2,19 +2,15 @@ import {
   AdditiveBlending,
   BufferAttribute,
   BufferGeometry,
-  CustomBlending,
   GLSL3,
   Mesh,
-  OneMinusSrcAlphaFactor,
   PerspectiveCamera,
   PlaneGeometry,
   Points,
   Scene,
   ShaderMaterial,
   Vector3,
-  ZeroFactor,
   DoubleSide,
-  AddEquation,
   type WebGLRenderer,
 } from 'three';
 import type { Chapter, FrameInfo, Readout } from '../../Chapter';
@@ -26,7 +22,6 @@ import starsVert from './stars.vert';
 import starsFrag from './stars.frag';
 import supernovaVert from './supernova.vert';
 import supernovaFrag from './supernova.frag';
-import dustFrag from './dust.frag';
 import diskVert from './disk.vert';
 import diskFrag from './disk.frag';
 import glowVert from './glow.vert';
@@ -130,7 +125,6 @@ export class Galaxy implements Chapter {
   readonly camera = new PerspectiveCamera(40, 1, 0.0005, 4000);
 
   private readonly stars: Points<BufferGeometry, ShaderMaterial>;
-  private readonly dust: Points<BufferGeometry, ShaderMaterial>;
   private readonly haze: Mesh<PlaneGeometry, ShaderMaterial>;
   private readonly hazeUniforms: Record<string, { value: number }>;
   private readonly background: Points<BufferGeometry, ShaderMaterial>;
@@ -233,15 +227,6 @@ export class Galaxy implements Chapter {
     this.stars = new Points(layerGeometry(L), starMat);
     this.stars.frustumCulled = false;
 
-    // ── dust lanes: absorbing, on the concave (inner) edge of the arms ──
-    const nDust = Math.round(count * 0.08);
-    const D = makeLayer(nDust);
-    for (let i = 0; i < nDust; i++) {
-      const arm = rand() < 0.5 ? 0 : 1;
-      const a = expo(6.5, 2.4, 19);
-      const width = 0.3 + 0.05 * a;
-      push(D, a, armAngle(a, arm) + 0.24 + (gaussian(rand) * width * (rand() < 0.7 ? 1 : 2)) / a, 1, gaussian(rand) * 0.04, 0.35 + 0.55 * rand(), 1, [0.012 + 0.02 * rand(), 0, 0]);
-    }
     // ── unresolved starlight: a smooth surface-brightness map in the disk plane ──
     this.hazeUniforms = {
       uTime: this.uniforms.uTime,
@@ -268,22 +253,6 @@ export class Galaxy implements Chapter {
     );
     this.haze.frustumCulled = false;
 
-    const dustUniforms = { ...this.uniforms, uIntensity: { value: 1 }, uMaxPx: { value: 90 } };
-    const dustMat = new ShaderMaterial({
-      glslVersion: GLSL3,
-      vertexShader: starsVert,
-      fragmentShader: dustFrag,
-      uniforms: dustUniforms,
-      blending: CustomBlending,
-      blendEquation: AddEquation,
-      blendSrc: ZeroFactor,
-      blendDst: OneMinusSrcAlphaFactor,
-      depthTest: false,
-      depthWrite: false,
-      transparent: true,
-    });
-    this.dust = new Points(layerGeometry(D), dustMat);
-    this.dust.frustumCulled = false;
 
     // ── distant background stars ──
     const nBg = 5000;
@@ -398,8 +367,7 @@ export class Galaxy implements Chapter {
     this.supernovae.frustumCulled = false;
     this.supernovae.renderOrder = 4;
 
-    this.scene.add(this.deepField, this.background, this.haze, this.stars, this.dust, this.core, this.hero, this.supernovae);
-    this.dust.renderOrder = 1;
+    this.scene.add(this.deepField, this.background, this.haze, this.stars, this.core, this.hero, this.supernovae);
     this.core.renderOrder = 2;
     this.hero.renderOrder = 3;
   }
@@ -423,8 +391,6 @@ export class Galaxy implements Chapter {
     this.uniforms.uViewportH.value = f.bufferHeight;
     this.uniforms.uMaxPx.value = 3.6 * f.dpr;
     this.uniforms.uIntensity.value = 0.9 * this.weight * (180_000 / Math.max(this.stars.geometry.drawRange.count, 1)) ** 0.5;
-    (this.dust.material.uniforms.uMaxPx as { value: number }).value = 60 * f.dpr;
-    (this.dust.material.uniforms.uIntensity as { value: number }).value = smoothstep(0.35, 0.7, z) * this.weight;
     (this.background.material.uniforms.uFade as { value: number }).value = this.weight;
     const df = this.deepField.material.uniforms as { uFade: { value: number }; uDpr: { value: number } };
     df.uFade.value = this.weight;
@@ -549,7 +515,7 @@ export class Galaxy implements Chapter {
   }
 
   dispose() {
-    for (const o of [this.stars, this.dust, this.background, this.deepField, this.haze, this.supernovae]) {
+    for (const o of [this.stars, this.background, this.deepField, this.haze, this.supernovae]) {
       o.geometry.dispose();
       o.material.dispose();
     }

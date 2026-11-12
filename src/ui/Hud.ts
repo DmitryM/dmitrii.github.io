@@ -1,55 +1,37 @@
 import type { Readout } from '../gl/Chapter';
 
+import { UI, clientLocale, num, sig, type Locale } from '../i18n/index.ts';
+
 const LY = 9.4607e15;
 const AU = 1.495978707e11;
 
-function sig(x: number, digits = 3): string {
-  if (x >= 1000) return Math.round(x).toLocaleString('en-US').replace(/,/g, ' ');
-  return Number(x.toPrecision(digits)).toString();
+/** Human-readable length, e.g. 3.1e14 → "2 070 AU" (locale-aware units and decimals). */
+export function humanLength(m: number, loc: Locale = 'en'): string {
+  const u = UI[loc].units;
+  if (m >= 1e3 * LY) return `${sig(m / (1e3 * LY), loc)} ${u.kly}`;
+  if (m >= 0.3 * LY) return `${sig(m / LY, loc)} ${u.ly}`;
+  if (m >= 0.05 * AU) return `${sig(m / AU, loc)} ${u.au}`;
+  if (m >= 1e3) return `${sig(m / 1e3, loc)} ${u.km}`;
+  if (m >= 1) return `${sig(m, loc)} ${u.m}`;
+  if (m >= 1e-3) return `${sig(m * 1e3, loc)} ${u.mm}`;
+  if (m >= 1e-6) return `${sig(m * 1e6, loc)} ${u.um}`;
+  if (m >= 1e-9) return `${sig(m * 1e9, loc)} ${u.nm}`;
+  return `${sig(m * 1e12, loc)} ${u.pm}`;
 }
 
-/** Human-readable length, e.g. 3.1e14 → "2 070 AU". */
-export function humanLength(m: number): string {
-  if (m >= 1e3 * LY) return `${sig(m / (1e3 * LY))} kly`;
-  if (m >= 0.3 * LY) return `${sig(m / LY)} ly`;
-  if (m >= 0.05 * AU) return `${sig(m / AU)} AU`;
-  if (m >= 1e3) return `${sig(m / 1e3)} km`;
-  if (m >= 1) return `${sig(m)} m`;
-  if (m >= 1e-3) return `${sig(m * 1e3)} mm`;
-  if (m >= 1e-6) return `${sig(m * 1e6)} µm`;
-  if (m >= 1e-9) return `${sig(m * 1e9)} nm`;
-  return `${sig(m * 1e12)} pm`;
+/** log10(size in m) at which each entry of UI.objects becomes the reference object. */
+const OBJECT_SCALES = [-11, -8.6, -7, -5, -3, -0.5, 3, 6.6, 8.8, 11, 12.8, 15.6, 16.6, 18.2, 19.6, 20.6];
+
+export function objectAtScale(log10: number, loc: Locale = 'en'): string {
+  const names = UI[loc].objects;
+  let k = 0;
+  OBJECT_SCALES.forEach((l, i) => {
+    if (log10 >= l) k = i;
+  });
+  return names[k] ?? names[0]!;
 }
 
-const OBJECTS: [number, string][] = [
-  [-11, 'hydrogen atom'],
-  [-8.6, 'DNA double helix'],
-  [-7, 'virus'],
-  [-5, 'living cell'],
-  [-3, 'grain of sand'],
-  [-0.5, 'human'],
-  [3, 'city'],
-  [6.6, 'Earth'],
-  [8.8, 'Sun'],
-  [11, 'Earth’s orbit'],
-  [12.8, 'Solar System'],
-  [15.6, 'one light-year'],
-  [16.6, 'nearest stars'],
-  [18.2, 'star-forming region'],
-  [19.6, 'spiral arm'],
-  [20.6, 'Milky Way–like galaxy'],
-];
-
-export function objectAtScale(log10: number): string {
-  let name = OBJECTS[0]![1];
-  for (const [l, n] of OBJECTS) if (log10 >= l) name = n;
-  return name;
-}
-
-const fmtExp = (log10: number) => {
-  const v = log10.toFixed(1).replace('-', '−');
-  return `10<sup>${v}</sup> m`;
-};
+const fmtExp = (log10: number, loc: Locale) => `10<sup>${num(log10, 1, loc)}</sup> ${UI[loc].units.m}`;
 
 export class Hud {
   private readonly numeral = document.querySelector<HTMLElement>('[data-hud-numeral]');
@@ -64,6 +46,8 @@ export class Hud {
   private readonly levels = [...document.querySelectorAll<SVGGElement>('.lv[data-level]')];
   private readonly transitions = [...document.querySelectorAll<SVGGElement>('[data-transition]')];
   private readonly levelYs: number[];
+  private readonly loc = clientLocale();
+  private readonly langLink = document.querySelector<HTMLAnchorElement>('[data-lang-switch]');
 
   private chapter = -1;
   private lastScale = '';
@@ -86,17 +70,22 @@ export class Hud {
     if (!link) return;
     if (this.numeral) this.numeral.textContent = link.querySelector('.rail__num')?.textContent ?? '';
     if (this.title) this.title.textContent = link.querySelector('.rail__title')?.textContent ?? '';
+    // switching language keeps the reader in the same chapter
+    if (this.langLink) {
+      const base = this.langLink.getAttribute('href')!.split('#')[0];
+      this.langLink.setAttribute('href', i > 0 ? `${base}${link.getAttribute('href')}` : base!);
+    }
     this.rail.forEach((a, k) => a.setAttribute('aria-current', k === i ? 'true' : 'false'));
   }
 
   setScale(log10: number) {
     if (!Number.isFinite(log10)) return;
-    const exp = fmtExp(log10);
+    const exp = fmtExp(log10, this.loc);
     if (exp !== this.lastScale && this.scaleExp) {
       this.scaleExp.innerHTML = exp;
       this.lastScale = exp;
     }
-    const human = `≈ ${humanLength(Math.pow(10, log10))}`;
+    const human = `≈ ${humanLength(Math.pow(10, log10), this.loc)}`;
     if (human !== this.lastHuman && this.scaleHuman) {
       this.scaleHuman.textContent = human;
       this.lastHuman = human;
@@ -107,8 +96,8 @@ export class Hud {
     const key = log10.toFixed(1);
     if (key === this.lastZoom) return;
     this.lastZoom = key;
-    if (this.zoomScale) this.zoomScale.innerHTML = fmtExp(log10);
-    if (this.zoomObject) this.zoomObject.textContent = objectAtScale(log10);
+    if (this.zoomScale) this.zoomScale.innerHTML = fmtExp(log10, this.loc);
+    if (this.zoomObject) this.zoomObject.textContent = objectAtScale(log10, this.loc);
   }
 
   setReadouts(list: Readout[], now: number) {

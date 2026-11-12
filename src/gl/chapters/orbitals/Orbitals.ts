@@ -19,6 +19,7 @@ import { clamp, damp, lerp, smoothstep } from '../../util';
 import { meanRadius, orbitalSubscript, type OrbitalState } from '../../../physics/hydrogen';
 import { wavelengthColor } from '../../../physics/blackbody';
 import { band, formatWavelength, levelEnergy, lineName, transitionWavelength } from '../../../physics/spectra';
+import { UI, clientLocale, num } from '../../../i18n/index.ts';
 import type { OrbitalBuffers } from './sampler.worker';
 import particlesVert from './particles.vert';
 import particlesFrag from './particles.frag';
@@ -73,6 +74,7 @@ export class Orbitals implements Chapter {
   private stage = { x: 0.5, y: 0.5, w: 600 };
   private stageEl: HTMLElement | null;
   private time = 0;
+  private readonly loc = clientLocale();
 
   constructor(
     private readonly roles: RoleState[],
@@ -293,8 +295,8 @@ export class Orbitals implements Chapter {
     const out: Readout[] = [
       ['ψ', `${this.roles[idx]!.label.replace(orbitalSubscript(s.l, s.m), '')}<sub>${orbitalSubscript(s.l, s.m)}</sub>`],
       ['n l m', `${s.n} ${s.l} ${s.m < 0 ? '−' + Math.abs(s.m) : s.m}`],
-      ['E', `${levelEnergy(s.n).toFixed(2).replace('-', '−')} eV`],
-      ['⟨r⟩', `${meanRadius(s.n, s.l).toFixed(1)} a₀`],
+      ['E', `${num(levelEnergy(s.n), 2, this.loc)} ${UI[this.loc].eV}`],
+      ['⟨r⟩', `${num(meanRadius(s.n, s.l), 1, this.loc)} a₀`],
     ];
     const seg = Math.floor(ri);
     const t = ri - seg;
@@ -302,7 +304,7 @@ export class Orbitals implements Chapter {
       const a = this.roles[seg]!.state.n;
       const b = this.roles[seg + 1]!.state.n;
       const lam = transitionWavelength(a, b);
-      out.push(['γ', `${lineName(a, b)} · ${formatWavelength(lam)}`]);
+      out.push(['γ', `${lineName(a, b, this.loc)} · ${formatWavelength(lam, this.loc)}`]);
     }
     return out;
   }

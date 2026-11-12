@@ -1,5 +1,6 @@
 import type { BlackHole, ObservatoryParams } from '../gl/chapters/blackhole/BlackHole';
 import type { Motion } from './Motion';
+import { clientLocale, num } from '../i18n/index.ts';
 
 /**
  * Free-flight mode around the black hole: drag to orbit, wheel/pinch for distance, and physics
@@ -15,6 +16,7 @@ export class Observatory {
   private drag: { id: number; x: number; y: number } | null = null;
   private readonly touches = new Map<number, { x: number; y: number }>();
   private pinch = 0;
+  private readonly loc = clientLocale();
 
   constructor(
     private readonly bh: BlackHole,
@@ -101,9 +103,9 @@ export class Observatory {
       const out = this.form?.querySelector(`[data-out="${name}"]`);
       if (out) out.textContent = text;
     };
-    set('temperature', o.temperature, `${Math.round(o.temperature).toLocaleString('en-US').replace(/,/g, ' ')} K`);
+    set('temperature', o.temperature, `${num(Math.round(o.temperature), 0, this.loc)} K`);
     set('inclination', Math.round(o.inclination), `${Math.round(o.inclination)}°`);
-    set('distance', Math.round(o.distance * 2) / 2, `${o.distance.toFixed(1)} r_s`);
+    set('distance', Math.round(o.distance * 2) / 2, `${num(o.distance, 1, this.loc)} r_s`);
     if (all) {
       const box = (name: string, v: boolean) => {
         const el = this.field(name);

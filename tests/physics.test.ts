@@ -11,7 +11,7 @@ import {
 } from '../src/physics/schwarzschild.ts';
 import { blackbodyChroma, wavelengthColor } from '../src/physics/blackbody.ts';
 import { meanRadius, realHarmonic, sampleOrbital, sortByRadius } from '../src/physics/hydrogen.ts';
-import { dipoleAllowed, levelEnergy, lineName, transitionWavelength } from '../src/physics/spectra.ts';
+import { dipoleAllowed, formatWavelength, levelEnergy, lineName, transitionWavelength } from '../src/physics/spectra.ts';
 import { site } from '../src/content/site.ts';
 
 describe('Schwarzschild geometry', () => {
@@ -93,7 +93,7 @@ describe('hydrogen spectroscopy', () => {
     expect(levelEnergy(4)).toBeCloseTo(-0.85, 2);
   });
   it('role ladder only contains dipole-allowed steps', () => {
-    const states = site.experience.roles.map((r) => r.state);
+    const states = site.roles.map((r) => r.state);
     for (let i = 0; i + 1 < states.length; i++) {
       expect(dipoleAllowed(states[i]!, states[i + 1]!)).toBe(true);
       expect(states[i]!.n).toBeGreaterThan(states[i + 1]!.n);
@@ -102,7 +102,7 @@ describe('hydrogen spectroscopy', () => {
 });
 
 describe('hydrogen orbital sampler', () => {
-  for (const state of site.experience.roles.map((r) => r.state)) {
+  for (const state of site.roles.map((r) => r.state)) {
     it(`⟨r⟩ of ${state.label} matches (3n² − l(l+1))/2`, () => {
       const s = sampleOrbital(state, 120_000, 7);
       let sum = 0;
@@ -139,5 +139,17 @@ describe('hydrogen orbital sampler', () => {
   it('sortByRadius orders samples', () => {
     const s = sortByRadius(sampleOrbital({ n: 2, l: 1, m: 1 }, 2000, 5));
     for (let i = 1; i < 2000; i++) expect(s.radii[i]!).toBeGreaterThanOrEqual(s.radii[i - 1]!);
+  });
+});
+
+describe('locale-aware formatting', () => {
+  it('uses a decimal comma and Cyrillic units in Russian', async () => {
+    const { num } = await import('../src/i18n/index.ts');
+    expect(num(-0.8499, 2, 'ru')).toBe('−0,85');
+    expect(num(-0.8499, 2, 'en')).toBe('−0.85');
+    expect(num(12345.6, 0, 'en')).toBe('12 346');
+    expect(formatWavelength(656.47, 'ru')).toBe('656,5 нм');
+    expect(formatWavelength(1875.6, 'en')).toBe('1.876 µm');
+    expect(lineName(3, 2, 'ru')).toBe('Бальмер-α');
   });
 });

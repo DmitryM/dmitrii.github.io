@@ -42,3 +42,14 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
+
+/* Russian: Instrument Serif has no Cyrillic, so the display face switches to Playfair Display.
+   It sets wider, so the display steps are scaled down a touch. */
+:root:lang(ru) {
+  --font-display: 'Playfair Display Variable', 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --step-1: clamp(1.1rem, 1rem + 0.42vw, 1.36rem);
+  --step-2: clamp(1.42rem, 1.16rem + 1.2vw, 2.3rem);
+  --step-3: clamp(1.8rem, 1.3rem + 2.3vw, 3.35rem);
+  --step-4: clamp(2.35rem, 1.35rem + 4.9vw, 7rem);
+  --step-hero: clamp(3rem, 0.9rem + 9.4vw, 10.2rem);
+}

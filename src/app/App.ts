@@ -57,6 +57,7 @@ export class App {
   private composer!: Composer;
   private dynres!: DynamicResolution;
   private lut!: DataTexture;
+  private startScale: number | undefined;
   private chapters: Chapter[] = [];
   private active: Chapter[] = [];
   private readonly pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -102,7 +103,8 @@ export class App {
 
     // ── quality ──
     const forced = params.get('quality');
-    let tierName: TierName = this.capture ? 'ultra' : isTierName(forced) ? forced : guessTier(renderer);
+    // High quality by default; only software renderers start lower. Resolution adapts at runtime.
+    let tierName: TierName = this.capture ? 'ultra' : isTierName(forced) ? forced : guessTier(renderer) === 'low' && /SwiftShader|llvmpipe|Software/i.test(String(renderer.getContext().getParameter(0x1f01))) ? 'low' : 'high';
     this.tier = { ...TIERS[tierName] };
     this.sizeToCanvas();
 
@@ -127,6 +129,7 @@ export class App {
       this.tier = { ...TIERS[tierName], orbitalParticles: this.tier.orbitalParticles };
     }
     this.dynres = new DynamicResolution(this.tier.bhScale);
+    this.dynres.scale = this.startScale ?? this.tier.bhScale;
     this.sizeToCanvas();
 
     // ── remaining chapters ──
@@ -189,9 +192,12 @@ export class App {
     const fullPixels = this.width * this.height * this.dpr * this.dpr;
     const budget = 11; // ms for the tracer, leaving room for post-processing
     let name = start;
-    const cost = (t: Tier) => ms * ((fullPixels * t.bhScale * t.bhScale) / (W * H)) * (t.bhSteps / TIERS[start].bhSteps);
-    while (name !== 'low' && cost(TIERS[name]) > budget) name = lowerTier(name);
-    if (name === start && start === 'high' && cost(TIERS.ultra) < budget * 0.55) name = 'ultra';
+    const cost = (t: Tier, scale = t.bhScale) => ms * ((fullPixels * scale * scale) / (W * H)) * (t.bhSteps / TIERS[start].bhSteps);
+    if (start === 'high' && cost(TIERS.ultra) < budget * 0.8) name = 'ultra';
+    // keep the tier's features; only step down when even the minimum resolution cannot keep up
+    while (name !== 'low' && cost(TIERS[name], 0.34) > budget * 1.5) name = lowerTier(name);
+    // start the dynamic-resolution controller near the scale the benchmark predicts will fit
+    this.startScale = Math.min(TIERS[name].bhScale, Math.max(0.34, Math.sqrt(budget / Math.max(cost(TIERS[name], 1), 1e-3))));
     if (name !== start) {
       const t = TIERS[name];
       this.blackhole.scale = t.bhScale;

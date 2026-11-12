@@ -20,6 +20,7 @@ import type { Chapter, FrameInfo, Readout } from '../../Chapter';
 import { clamp, damp, easeInOutCubic, lerp, smoothstep } from '../../util';
 import { blackbodyChroma } from '../../../physics/blackbody';
 import { mulberry32 } from '../../../physics/hydrogen';
+import { UI, clientLocale } from '../../../i18n/index.ts';
 import starsVert from './stars.vert';
 import starsFrag from './stars.frag';
 import dustFrag from './dust.frag';
@@ -130,6 +131,7 @@ export class Galaxy implements Chapter {
   private cssH = 1;
   private dist = D_NEAR;
   private heroFade = 1;
+  private readonly loc = clientLocale();
   private stageX = 0.5;
   private stageY = 0.5;
 
@@ -371,11 +373,12 @@ export class Galaxy implements Chapter {
   }
 
   readouts(): Readout[] {
+    const { readouts: r, units: u } = UI[this.loc];
     return [
-      ['v_rot', '≈ 220 km/s · flat'],
-      ['R', '≈ 50 kly'],
-      ['arms', 'density wave, m = 2'],
-      ['⇒', 'dark matter halo'],
+      [r.vrot, `≈ 220 ${u.kms} · ${r.flat}`],
+      [r.radius, `≈ 50 ${u.kly}`],
+      [r.arms, r.densityWave],
+      ['⇒', r.darkHalo],
     ];
   }
 

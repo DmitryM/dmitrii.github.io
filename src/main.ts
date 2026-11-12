@@ -2,6 +2,9 @@ import '@fontsource/instrument-serif/400.css';
 import '@fontsource/instrument-serif/400-italic.css';
 import '@fontsource-variable/inter/wght.css';
 import '@fontsource-variable/jetbrains-mono/wght.css';
+// Cyrillic display face for /ru/ — only downloaded where it is used (unicode-range + font matching)
+import '@fontsource-variable/playfair-display/wght.css';
+import '@fontsource-variable/playfair-display/wght-italic.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/chrome.css';

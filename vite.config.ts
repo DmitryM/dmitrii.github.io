@@ -2,7 +2,8 @@
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { renderPage } from './src/content/render.ts';
+import { fileURLToPath } from 'node:url';
+import { localeForPath, renderPage } from './src/content/render.ts';
 
 /**
  * Loads .glsl/.vert/.frag files as strings and resolves `#include "relative/path.glsl"`
@@ -55,12 +56,13 @@ function siteContent(): Plugin {
     configureServer(s) {
       server = s;
     },
-    async transformIndexHtml(html) {
+    async transformIndexHtml(html, ctx) {
+      // the locale is decided by the entry's URL: /index.html → en, /ru/index.html → ru
       if (server) {
         const mod = (await server.ssrLoadModule('/src/content/render.ts')) as typeof import('./src/content/render.ts');
-        return mod.renderPage(html);
+        return mod.renderPage(html, mod.localeForPath(ctx.path));
       }
-      return renderPage(html);
+      return renderPage(html, localeForPath(ctx.path));
     },
     handleHotUpdate({ file, server: s }) {
       if (file.includes(`${path.sep}src${path.sep}content${path.sep}`)) {
@@ -74,14 +76,18 @@ function siteContent(): Plugin {
 
 /** Preload the few font files the first screen needs (hashed names are only known after bundling). */
 function fontPreload(): Plugin {
-  const WANTED = [/instrument-serif-latin-400-normal-.*\.woff2$/, /instrument-serif-latin-400-italic-.*\.woff2$/, /inter-latin-wght-normal-.*\.woff2$/, /jetbrains-mono-latin-wght-normal-.*\.woff2$/];
+  const WANTED: Record<'en' | 'ru', RegExp[]> = {
+    en: [/instrument-serif-latin-400-normal-.*\.woff2$/, /instrument-serif-latin-400-italic-.*\.woff2$/, /inter-latin-wght-normal-.*\.woff2$/, /jetbrains-mono-latin-wght-normal-.*\.woff2$/],
+    ru: [/playfair-display-cyrillic-wght-normal-.*\.woff2$/, /playfair-display-cyrillic-wght-italic-.*\.woff2$/, /inter-cyrillic-wght-normal-.*\.woff2$/, /inter-latin-wght-normal-.*\.woff2$/],
+  };
   return {
     name: 'font-preload',
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
       handler(_html, ctx) {
-        const files = Object.keys(ctx.bundle ?? {}).filter((f) => WANTED.some((re) => re.test(f)));
+        const wanted = WANTED[localeForPath(ctx.path)];
+        const files = Object.keys(ctx.bundle ?? {}).filter((f) => wanted.some((re) => re.test(f)));
         return files.map((f) => ({
           tag: 'link',
           attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `/${f}`, crossorigin: '' },
@@ -96,6 +102,13 @@ export default defineConfig({
   plugins: [glsl(), siteContent(), fontPreload()],
   build: {
     target: 'es2022',
+    // one static page per language
+    rolldownOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        ru: fileURLToPath(new URL('./ru/index.html', import.meta.url)),
+      },
+    },
     assetsInlineLimit: 0,
     chunkSizeWarningLimit: 900,
   },

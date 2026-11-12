@@ -25,6 +25,7 @@ import type { Chapter, FrameInfo, Readout } from '../../Chapter';
 import type { Tier } from '../../Quality';
 import { FullscreenPass, clamp, damp, keyframes, lerp, smoothstep } from '../../util';
 import { clockRate, schwarzschildRadiusMeters } from '../../../physics/schwarzschild';
+import { UI, clientLocale, num } from '../../../i18n/index.ts';
 import blackholeFrag from './blackhole.frag';
 import skyVert from './sky.vert';
 import skyFrag from './sky-bake.frag';
@@ -82,6 +83,7 @@ export class BlackHole implements Chapter {
   private readonly right = new Vector3();
   private readonly up = new Vector3();
   private time = 0;
+  private readonly loc = clientLocale();
 
   constructor(
     private readonly renderer: WebGLRenderer,
@@ -371,11 +373,12 @@ export class BlackHole implements Chapter {
 
   readouts(): Readout[] {
     const r = this.r;
+    const l = this.loc;
     return [
-      ['r', `${r.toFixed(r < 10 ? 2 : 1)} r_s`],
-      ['i', `${(this.incl / DEG).toFixed(1)}°`],
-      ['clock', `${clockRate(r).toFixed(3)} t∞`],
-      ['M', '6.5×10⁹ M☉'],
+      ['r', `${num(r, r < 10 ? 2 : 1, l)} r_s`],
+      ['i', `${num(this.incl / DEG, 1, l)}°`],
+      [UI[l].readouts.clock, `${num(clockRate(r), 3, l)} t∞`],
+      ['M', `${num(6.5, 1, l)}×10⁹ M☉`],
     ];
   }
 

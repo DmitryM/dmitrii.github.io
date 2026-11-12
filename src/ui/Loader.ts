@@ -68,7 +68,7 @@ export class Loader {
       const wait = () => {
         if (this.shown >= 0.999) {
           const label = this.el?.querySelector('.loader__text');
-          if (label) label.textContent = 'Observed';
+          if (label instanceof HTMLElement) label.textContent = label.dataset.done ?? label.textContent;
           setTimeout(() => {
             this.el?.classList.add('is-done');
             setTimeout(() => {

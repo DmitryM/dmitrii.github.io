@@ -117,11 +117,38 @@ html:not(.js) .poster,
 .hud button {
   pointer-events: auto;
 }
-.hud__brand {
+.hud__left {
   justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hud__brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+.hud__lang {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+  transition:
+    color 0.3s,
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.hud__lang:hover,
+.hud__lang:focus-visible {
+  color: var(--ink);
+  border-color: var(--amber);
+  background: rgb(255 180 107 / 0.08);
 }
 .hud__mono {
   display: grid;

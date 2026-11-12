@@ -600,3 +600,20 @@ main {
     transform: none;
   }
 }
+
+/* Playfair needs less negative tracking and a little more leading than Instrument Serif */
+:root:lang(ru) .hero__name {
+  letter-spacing: -0.035em;
+  line-height: 0.9;
+}
+:root:lang(ru) .about__lead,
+:root:lang(ru) .interstitial__text,
+:root:lang(ru) .experience__title,
+:root:lang(ru) .contact__title,
+:root:lang(ru) .role__title {
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+:root:lang(ru) .interstitial__text {
+  max-width: 22ch;
+}

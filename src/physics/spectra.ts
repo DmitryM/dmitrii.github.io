@@ -1,4 +1,5 @@
 /** Hydrogen spectroscopy: Bohr levels and Rydberg-formula transition wavelengths. */
+import { UI, num, type Locale } from '../i18n/index.ts';
 
 /** Rydberg constant for hydrogen (reduced-mass corrected) [1/m]. */
 export const RYDBERG_H = 1.09677583e7;
@@ -17,12 +18,11 @@ export function transitionWavelength(upper: number, lower: number): number {
   return 1e9 / inv;
 }
 
-const SERIES = ['Lyman', 'Balmer', 'Paschen', 'Brackett', 'Pfund', 'Humphreys'];
 const GREEK = ['α', 'β', 'γ', 'δ', 'ε'];
 
 /** Spectroscopic name, e.g. (3,2) → "Balmer-α" (a.k.a. H-α). */
-export function lineName(upper: number, lower: number): string {
-  const series = SERIES[lower - 1] ?? `n=${lower}`;
+export function lineName(upper: number, lower: number, loc: Locale = 'en'): string {
+  const series = UI[loc].series[lower - 1] ?? `n=${lower}`;
   const greek = GREEK[upper - lower - 1] ?? `${upper}`;
   return `${series}-${greek}`;
 }
@@ -40,7 +40,12 @@ export function dipoleAllowed(a: { l: number; m: number }, b: { l: number; m: nu
   return Math.abs(a.l - b.l) === 1 && Math.abs(Math.abs(a.m) - Math.abs(b.m)) <= 1;
 }
 
-/** Format a wavelength for display: "656.5 nm" / "1.876 µm". */
-export function formatWavelength(lambdaNm: number): string {
-  return lambdaNm >= 1000 ? `${(lambdaNm / 1000).toFixed(3)} µm` : `${lambdaNm.toFixed(1)} nm`;
+export function bandLabel(b: Band, loc: Locale = 'en'): string {
+  return UI[loc].bands[b];
+}
+
+/** Format a wavelength for display: "656.5 nm" / "1.876 µm" (locale-aware). */
+export function formatWavelength(lambdaNm: number, loc: Locale = 'en'): string {
+  const u = UI[loc].units;
+  return lambdaNm >= 1000 ? `${num(lambdaNm / 1000, 3, loc)} ${u.um}` : `${num(lambdaNm, 1, loc)} ${u.nm}`;
 }

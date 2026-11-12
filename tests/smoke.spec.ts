@@ -103,3 +103,24 @@ test('mobile layout has no horizontal overflow', async ({ browser }) => {
   expect(overflow).toBeLessThanOrEqual(0);
   await ctx.close();
 });
+
+test('Russian page is translated and links back to English', async ({ page }) => {
+  const errors = consoleErrors(page);
+  await page.goto('/ru/?quality=low');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.locator('html')).toHaveClass(/gl-ready/, { timeout: 60_000 });
+  await expect(page.locator('h1')).toContainText('Дмитрий');
+  await expect(page.getByText('Проектирование и внедрение приложений')).toHaveCount(1);
+  await expect(page.locator('.hud__scale-label')).toHaveText('Поле зрения');
+  // the display face for Cyrillic is Playfair Display (Instrument Serif has no Cyrillic glyphs)
+  const family = await page.locator('h1').evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(family).toContain('Playfair');
+  // live readouts use a decimal comma
+  await expect(page.locator('[data-readouts]')).toContainText(',', { timeout: 10_000 });
+  const lang = page.locator('[data-lang-switch]');
+  await expect(lang).toHaveText('EN');
+  await lang.click();
+  await expect(page).toHaveURL(/\/$|\/#/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(errors).toEqual([]);
+});

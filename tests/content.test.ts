@@ -60,7 +60,7 @@ describe('content rendering', () => {
         expect(head).toContain('hreflang="ru" href="https://malikov.page/ru/"');
         expect(head).toContain('hreflang="x-default" href="https://malikov.page/"');
         expect(head).toContain(`<title>${esc(t.seo.title)}</title>`);
-        expect(head).toContain('og:image" content="https://malikov.page/og.jpg"');
+        expect(head).toContain(`og:image" content="https://malikov.page/${loc === 'en' ? 'og.jpg' : `og-${loc}.jpg`}"`);
       });
 
       it('emits valid JSON-LD for a Person', () => {

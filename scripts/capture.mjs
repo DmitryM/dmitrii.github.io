@@ -24,9 +24,9 @@ const browser = await chromium.launch({
   args: ['--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
 });
 
-async function frame(capture, width, height, file, decorate) {
+async function frame(capture, width, height, file, decorate, route = '/') {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
-  await page.goto(`${base}/?capture=${capture}`, { waitUntil: 'load' });
+  await page.goto(`${base}${route}?capture=${capture}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__captureReady === true, null, { timeout: 120_000 });
   await page.waitForTimeout(1200);
   if (decorate) await page.evaluate(decorate);
@@ -36,17 +36,34 @@ async function frame(capture, width, height, file, decorate) {
   console.log('✓', path.relative(root, file));
 }
 
-// social card: the hero frame with the name set in the site's display face
-await frame('og', 1200, 630, out('og.jpg'), async () => {
+// social cards: the hero frame with the name set in each page's display face
+const card = (kicker, given, family) => async ([kicker, given, family]) => {
   await document.fonts.ready;
   const el = document.createElement('div');
-  el.innerHTML = `<div style="position:fixed;left:64px;bottom:58px;z-index:99;color:#ede9e2;font-family:'Instrument Serif',serif;line-height:.86">
-      <div style="font:400 15px/1 'JetBrains Mono Variable',monospace;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,233,226,.6);margin-bottom:22px">Software Engineer · Barcelona</div>
-      <div style="font-size:118px;letter-spacing:-.03em">Dmitrii <i style="color:#f4d9bb">Malikov</i></div>
+  el.innerHTML = `<div style="position:fixed;left:64px;bottom:58px;z-index:99;color:#ede9e2;font-family:var(--font-display);line-height:.88">
+      <div style="font:400 15px/1 'JetBrains Mono Variable',monospace;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,233,226,.6);margin-bottom:22px">${kicker}</div>
+      <div style="font-size:${document.documentElement.lang === 'ru' ? 96 : 118}px;letter-spacing:-.03em">${given} <i style="color:#f4d9bb">${family}</i></div>
     </div>`;
   document.body.appendChild(el.firstElementChild);
-  document.querySelector('main').style.display = 'none';
-});
+  // load the display face for these glyphs before the screenshot
+  await document.fonts.load(`italic 96px ${getComputedStyle(document.documentElement).getPropertyValue('--font-display')}`, family);
+  await document.fonts.load(`96px ${getComputedStyle(document.documentElement).getPropertyValue('--font-display')}`, given);
+};
+const cards = [
+  ['/', out('og.jpg'), ['Software Engineer · Barcelona', 'Dmitrii', 'Malikov']],
+  ['/ru/', out('og-ru.jpg'), ['Инженер-программист · Барселона', 'Дмитрий', 'Маликов']],
+];
+for (const [route, file, text] of cards) {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  await page.goto(`${base}${route}?capture=og`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__captureReady === true, null, { timeout: 120_000 });
+  await page.waitForTimeout(1200);
+  await page.evaluate(card(), text);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: file, type: 'jpeg', quality: 90 });
+  await page.close();
+  console.log('✓', path.relative(root, file));
+}
 
 // static fallback poster
 await frame('hero', 1600, 1000, out('poster.jpg'));

@@ -104,7 +104,7 @@ export function renderHead(loc: Locale = 'en'): string {
   const t = site.text[loc];
   const { seo, person } = t;
   const url = pageUrl(loc);
-  const og = new URL('og.jpg', site.url).href;
+  const og = new URL(loc === 'en' ? 'og.jpg' : `og-${loc}.jpg`, site.url).href;
   const alternates = [
     ...LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(l))}" />`),
     `<link rel="alternate" hreflang="x-default" href="${esc(pageUrl('en'))}" />`,
@@ -162,7 +162,7 @@ export function renderLevels(roles: Role[], loc: Locale = 'en'): string {
     lines.push(
       `<g class="lv" data-level="${i}"><line x1="64" x2="${W - 8}" y1="${yy}" y2="${yy}" /><text x="56" y="${yy + 4}" class="lv__n" text-anchor="end">n=${r.state.n}</text><text x="${W - 8}" y="${yy - 8}" class="lv__e" text-anchor="end">${ev(
         E,
-      )}</text><text x="70" y="${yy - 8}" class="lv__role">${esc(r.title)}</text></g>`,
+      )}</text><text x="70" y="${yy + 16}" class="lv__role">${esc(r.title)}</text></g>`,
     );
   });
   // transitions
@@ -170,7 +170,7 @@ export function renderLevels(roles: Role[], loc: Locale = 'en'): string {
     const a = roles[i]!.state.n;
     const b = roles[i + 1]!.state.n;
     const lam = transitionWavelength(a, b);
-    const x = 196;
+    const x = 170;
     const y1 = y(levelEnergy(a)) + 4;
     const y2 = y(levelEnergy(b)) - 6;
     lines.push(

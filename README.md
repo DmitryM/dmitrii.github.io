@@ -46,7 +46,7 @@ npm test             # physics + content unit tests (vitest)
 npm run test:e2e     # Playwright smoke tests against a production build
 npm run typecheck
 npm run build        # static site in dist/
-npm run capture      # re-render public/og.jpg, public/poster.jpg, apple-touch-icon.png
+npm run capture      # re-render public/og.jpg, og-ru.jpg, poster.jpg, apple-touch-icon.png
 ```
 
 URL switches:
@@ -59,16 +59,26 @@ URL switches:
 | `?reduced` | Reduced-motion mode |
 | `?capture=hero\|og\|fall\|dive\|quantum\|photon1\|galaxy…` | Deterministic frames with no UI |
 
+## Languages
+
+There are two static pages, built from the same shell:
+- **English** at `/`, from `index.html`
+- **Russian** at `/ru/`, from `ru/index.html`
+
+Each page has `hreflang` alternates, its own `og:locale` and social card (`og.jpg`, `og-ru.jpg`), and an EN/RU switch in the header that keeps the reader's chapter.
+- **Strings:** interface strings, units and number formatting (decimal comma in Russian) live in `src/i18n/index.ts`.
+- **Font:** Instrument Serif has no Cyrillic, so the Russian page sets display type in Playfair Display.
+
 ## Editing content
 
-All text lives in **`src/content/site.ts`**. At build time it's rendered into static HTML, meta tags and JSON-LD by the `siteContent()` plugin in `vite.config.ts`, so the page is complete without JavaScript and indexable.
+All text lives in **`src/content/site.ts`**: shared facts (dates, links, quantum states) plus one copy block per language. At build time it's rendered into static HTML, meta tags and JSON-LD by the `siteContent()` plugin in `vite.config.ts`, so the page is complete without JavaScript and indexable.
 
 **Contact slots.** `email`, `github` and `telegram` are empty and are hidden until you fill them in. The email address is written into the markup as reversed fragments and assembled only on interaction.
 
 **Orbitals.** Each role's orbital comes from its `state: { n, l, m }`. The unit tests check that consecutive roles stay dipole-allowed.
 
 ## Quality and robustness
-- **Tier choice.** A GPU benchmark (timer queries, with a CPU fallback) picks one of four tiers. A dynamic-resolution controller then holds the frame rate at the display's refresh.
+- **Tier choice.** Every device starts on the **high** tier: more ray steps, the soft disk halo, 340k particles and 2× pixel density. A GPU benchmark (timer queries, with a CPU fallback) picks the starting tracer resolution, and can upgrade to ultra or, for software renderers, step down. A dynamic-resolution controller then holds the frame rate at the display's refresh.
 - **Off-screen work.** Only visible chapters render, and shaders compile asynchronously behind the loader.
 - **Fallbacks:**
   - Without WebGL2 the page shows a pre-rendered poster.

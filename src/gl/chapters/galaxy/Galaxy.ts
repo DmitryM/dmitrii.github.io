@@ -24,6 +24,8 @@ import { mulberry32 } from '../../../physics/hydrogen';
 import { UI, clientLocale } from '../../../i18n/index.ts';
 import starsVert from './stars.vert';
 import starsFrag from './stars.frag';
+import supernovaVert from './supernova.vert';
+import supernovaFrag from './supernova.frag';
 import dustFrag from './dust.frag';
 import diskVert from './disk.vert';
 import diskFrag from './disk.frag';
@@ -142,6 +144,13 @@ export class Galaxy implements Chapter {
   private cssH = 1;
   private dist = D_NEAR;
   private heroFade = 1;
+  /** galactic clock: runs as a time-lapse once the whole galaxy is in view */
+  private clock = 0;
+  private camAz = -0.9;
+  private readonly supernovae: Points<BufferGeometry, ShaderMaterial>;
+  private readonly sn: { a: number; arm: number; off: number; t0: number; life: number }[] = [];
+  private nextSupernova = 2;
+  private readonly snRand = mulberry32(77);
   private readonly loc = clientLocale();
   private stageX = 0.5;
   private stageY = 0.5;
@@ -367,7 +376,29 @@ export class Galaxy implements Chapter {
     this.hero = new Mesh(new PlaneGeometry(1, 1), glowMat([sun[0], sun[1], sun[2]], 140));
     this.hero.frustumCulled = false;
 
-    this.scene.add(this.deepField, this.background, this.haze, this.stars, this.dust, this.core, this.hero);
+    // ── supernovae: a few transient points in the arms (positions/light curves updated per frame) ──
+    const SN = 4;
+    const snGeo = new BufferGeometry();
+    snGeo.setAttribute('position', new BufferAttribute(new Float32Array(SN * 3), 3));
+    snGeo.setAttribute('aColor', new BufferAttribute(new Float32Array(SN * 3), 3));
+    snGeo.setAttribute('aLum', new BufferAttribute(new Float32Array(SN), 1));
+    this.supernovae = new Points(
+      snGeo,
+      new ShaderMaterial({
+        glslVersion: GLSL3,
+        vertexShader: supernovaVert,
+        fragmentShader: supernovaFrag,
+        uniforms: { uSize: { value: 40 } },
+        blending: AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+      }),
+    );
+    this.supernovae.frustumCulled = false;
+    this.supernovae.renderOrder = 4;
+
+    this.scene.add(this.deepField, this.background, this.haze, this.stars, this.dust, this.core, this.hero, this.supernovae);
     this.dust.renderOrder = 1;
     this.core.renderOrder = 2;
     this.hero.renderOrder = 3;
@@ -384,7 +415,11 @@ export class Galaxy implements Chapter {
 
   update(f: FrameInfo) {
     const z = this.zoom;
-    this.uniforms.uTime.value = f.time;
+    // time-lapse: the galaxy's clock speeds up as the full disk comes into view, so differential
+    // rotation (inner stars overtaking outer ones) and the slower, rigid arm pattern become visible
+    const finale = smoothstep(0.82, 1, z);
+    this.clock += f.dt * (1 + 7 * finale);
+    this.uniforms.uTime.value = this.clock;
     this.uniforms.uViewportH.value = f.bufferHeight;
     this.uniforms.uMaxPx.value = 3.6 * f.dpr;
     this.uniforms.uIntensity.value = 0.9 * this.weight * (180_000 / Math.max(this.stars.geometry.drawRange.count, 1)) ** 0.5;
@@ -395,7 +430,7 @@ export class Galaxy implements Chapter {
     df.uFade.value = this.weight;
     df.uDpr.value = f.dpr;
 
-    galaxyOrbit(HERO.a, HERO.phase, f.time, this.heroPos);
+    galaxyOrbit(HERO.a, HERO.phase, this.clock, this.heroPos);
 
     const targetDist = this.distanceFor(z);
     this.dist = Math.exp(lerp(Math.log(this.dist), Math.log(targetDist), damp(5, f.dt)));
@@ -404,12 +439,15 @@ export class Galaxy implements Chapter {
     const ld = Math.log(this.dist);
     const toCenter = smoothstep(Math.log(1.2), Math.log(36), ld);
     this.target.copy(this.heroPos).multiplyScalar(1 - toCenter);
-    const elev = lerp(2, 52, smoothstep(Math.log(0.35), Math.log(30), ld)) * DEG + f.pointer.y * 0.05;
-    const az = -0.9 + f.time * 0.008 + f.pointer.x * 0.12;
+    // cinematic orbit in the finale: drifting azimuth, a slow nod in elevation, gentle breathing
+    const elev = (lerp(2, 52, smoothstep(Math.log(0.35), Math.log(30), ld)) + 7 * Math.sin(f.time * 0.07) * finale) * DEG + f.pointer.y * 0.05;
+    this.camAz += f.dt * (0.008 + 0.03 * finale);
+    const az = this.camAz + f.pointer.x * 0.12;
+    const camDist = this.dist * (1 + 0.045 * Math.sin(f.time * 0.05) * finale);
     this.camera.position.set(
-      this.target.x + this.dist * Math.cos(elev) * Math.cos(az),
-      this.target.y + this.dist * Math.sin(elev),
-      this.target.z + this.dist * Math.cos(elev) * Math.sin(az),
+      this.target.x + camDist * Math.cos(elev) * Math.cos(az),
+      this.target.y + camDist * Math.sin(elev),
+      this.target.z + camDist * Math.cos(elev) * Math.sin(az),
     );
     this.camera.lookAt(this.target);
     this.camera.near = Math.max(this.dist * 0.02, 0.0002);
@@ -440,6 +478,49 @@ export class Galaxy implements Chapter {
     hu.uScale!.value = Math.max(this.dist * 0.07, 0.0004);
     hu.uIntensity!.value = 1.8 * this.heroFade * smoothstep(0.1, 0.2, z) * this.weight;
     this.hero.visible = hu.uIntensity!.value > 1e-3;
+
+    const finaleView = smoothstep(0.9, 1, z);
+    (this.supernovae.material.uniforms.uSize as { value: number }).value = 46 * f.dpr;
+    this.updateSupernovae(f.dt, finaleView > 0.5 && this.weight > 0.5);
+  }
+
+  /** Spawn and age supernovae; they ride with the arm pattern where massive stars are born. */
+  private updateSupernovae(dt: number, active: boolean) {
+    if (active) {
+      this.nextSupernova -= dt;
+      if (this.nextSupernova <= 0 && this.sn.length < 4) {
+        const r = this.snRand;
+        this.sn.push({ a: 4.5 + r() * 12, arm: r() < 0.5 ? 0 : 1, off: (r() - 0.5) * 0.3, t0: this.clock, life: 0 });
+        this.nextSupernova = 1.6 + r() * 2.6;
+      }
+    }
+    const geo = this.supernovae.geometry;
+    const pos = geo.getAttribute('position') as BufferAttribute;
+    const col = geo.getAttribute('aColor') as BufferAttribute;
+    const lum = geo.getAttribute('aLum') as BufferAttribute;
+    for (let i = this.sn.length - 1; i >= 0; i--) {
+      const s = this.sn[i]!;
+      s.life += dt;
+      if (s.life > 3.2) this.sn.splice(i, 1);
+    }
+    for (let i = 0; i < 4; i++) {
+      const s = this.sn[i];
+      if (!s) {
+        lum.setX(i, 0);
+        continue;
+      }
+      const ang = armAngle(s.a, s.arm) + s.off / s.a + PARAMS.pattern * this.clock;
+      pos.setXYZ(i, s.a * Math.cos(ang), 0, s.a * Math.sin(ang));
+      // light curve: fast rise, exponential decline; the ejecta cool from blue-white to yellow
+      const t = s.life;
+      const L = (1 - Math.exp(-t / 0.08)) * Math.exp(-t / 0.75) * 2.2 * this.weight;
+      const c = starColor(Math.max(4500, 22000 * Math.exp(-t / 0.9)));
+      col.setXYZ(i, c[0], c[1], c[2]);
+      lum.setX(i, L);
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+    lum.needsUpdate = true;
   }
 
   draw(renderer: WebGLRenderer) {
@@ -468,7 +549,7 @@ export class Galaxy implements Chapter {
   }
 
   dispose() {
-    for (const o of [this.stars, this.dust, this.background, this.deepField, this.haze]) {
+    for (const o of [this.stars, this.dust, this.background, this.deepField, this.haze, this.supernovae]) {
       o.geometry.dispose();
       o.material.dispose();
     }

@@ -29,6 +29,11 @@ void main() {
     px = uMaxPx;
   }
   gl_PointSize = px;
+  // H II regions (the large sprites) live and die with their star clusters: slow, desynchronised
+  // brightening and fading along the arms
+  float hii = step(0.15, aParams.y);
+  float life = 0.5 + 0.5 * sin(uTime * 0.55 + aPhase * 7.0 + aOrbit * 1.3);
+  bright *= mix(1.0, 0.25 + 1.15 * life * life, hii);
   vColor = aColor * aParams.z * uIntensity * bright;
   vAlpha = alpha;
 }

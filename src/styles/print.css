@@ -1,0 +1,187 @@
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  /* neutralise the screen palette and any animation state GSAP left inline */
+  *,
+  *::before,
+  *::after {
+    color: #111 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  [style],
+  .line,
+  .char {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+  .hero__link {
+    border: 0 !important;
+  }
+  .hero__link::after {
+    content: ' — ' attr(href);
+    font-size: 8.5pt;
+  }
+  .roles {
+    gap: 0 !important;
+  }
+  .experience__head,
+  .about__content,
+  .contact__body {
+    margin-bottom: 8pt !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 10.5pt;
+  }
+  .gl,
+  .poster,
+  .loader,
+  .hud,
+  .frame,
+  .rail,
+  .readouts,
+  .observe-fab,
+  .observatory,
+  .skip,
+  .zoom,
+  .interstitial,
+  .levels,
+  .experience__stage,
+  .hero__actions,
+  .footer__back,
+  .footer__note,
+  .role__transition {
+    display: none !important;
+  }
+  .hero,
+  .about__track,
+  .hero__sticky,
+  .about__sticky,
+  .contact__body,
+  .role {
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  .hero__sticky::before {
+    display: none;
+  }
+  .hero__name {
+    font-size: 34pt;
+    color: #000;
+  }
+  .hero__last {
+    background: none;
+    color: #000;
+  }
+  .hero__role,
+  .kicker,
+  .role__state {
+    color: #444 !important;
+  }
+  .hero__role span:nth-child(2)::after {
+    display: none;
+  }
+  .about__content,
+  .contact__content {
+    margin: 0;
+    max-width: none;
+  }
+  .about__lead {
+    font-size: 15pt;
+    margin-top: 10pt;
+    text-shadow: none;
+  }
+  .about__follow,
+  .experience__note,
+  .contact__text {
+    color: #333 !important;
+  }
+  .experience {
+    padding: 12pt 0 0;
+  }
+  .experience__head {
+    text-align: left;
+    justify-items: start;
+    margin: 0 0 8pt;
+  }
+  .experience__title {
+    font-size: 18pt;
+  }
+  .experience__body {
+    display: block;
+  }
+  .roles {
+    display: block;
+    padding: 0;
+  }
+  .role {
+    break-inside: avoid;
+    margin-bottom: 10pt !important;
+  }
+  .role__card {
+    padding: 0;
+    border: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    gap: 6pt;
+  }
+  .role__title {
+    font-size: 15pt;
+  }
+  .role__orbital {
+    color: #444;
+  }
+  .role__meta,
+  .group__list {
+    color: #222 !important;
+  }
+  .group {
+    border-color: #ddd;
+    padding-top: 6pt;
+  }
+  .group__title {
+    color: #000;
+  }
+  .contact__title {
+    font-size: 18pt;
+    margin-top: 12pt;
+  }
+  .link {
+    border: 0;
+    background: none;
+    padding: 2pt 0;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    display: block;
+  }
+  .link__arrow {
+    display: none;
+  }
+  .link[href^='http']::after {
+    content: ' — ' attr(href);
+    font-size: 8.5pt;
+    color: #555;
+  }
+  .footer {
+    padding: 12pt 0 0;
+    color: #555;
+  }
+  [data-reveal],
+  .reveal-ready [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

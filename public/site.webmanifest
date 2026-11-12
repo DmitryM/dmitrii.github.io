@@ -1,0 +1,13 @@
+{
+  "name": "Dmitrii Malikov",
+  "short_name": "Malikov",
+  "description": "Software Engineer in Barcelona — a real-time physics journey across scales.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05060a",
+  "theme_color": "#05060a",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180" }
+  ]
+}

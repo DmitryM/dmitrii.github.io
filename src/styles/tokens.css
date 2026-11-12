@@ -1,0 +1,44 @@
+:root {
+  color-scheme: dark;
+
+  /* palette — deep space, warm starlight, two physical accents */
+  --bg: #05060a;
+  --bg-raise: #0b0d14;
+  --ink: #ede9e2;
+  --ink-2: rgb(237 233 226 / 0.74);
+  --ink-3: rgb(237 233 226 / 0.5);
+  --ink-4: rgb(237 233 226 / 0.32);
+  --line: rgb(237 233 226 / 0.12);
+  --line-2: rgb(237 233 226 / 0.24);
+  --glass: rgb(7 8 13 / 0.56);
+  --glass-strong: rgb(7 8 13 / 0.78);
+
+  --amber: #ffb46b; /* accretion disk, ψ > 0 */
+  --amber-deep: #ff8640;
+  --cyan: #7fd6ff; /* ψ < 0 */
+  --halpha: #ff5a6e; /* Balmer-α, 656 nm */
+  --infrared: #c33a4f;
+  --ultraviolet: #a98bff;
+
+  /* type */
+  --font-display: 'Instrument Serif', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --step--2: clamp(0.66rem, 0.64rem + 0.08vw, 0.72rem);
+  --step--1: clamp(0.8rem, 0.77rem + 0.14vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.6rem, 1.3rem + 1.4vw, 2.6rem);
+  --step-3: clamp(2.1rem, 1.5rem + 2.8vw, 4rem);
+  --step-4: clamp(2.8rem, 1.6rem + 6vw, 8.5rem);
+  --step-hero: clamp(3.9rem, 1.2rem + 12vw, 13rem);
+
+  /* space */
+  --gutter: clamp(16px, 4vw, 56px);
+  --hud-pad: clamp(14px, 2.2vw, 28px);
+  --radius: 18px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}

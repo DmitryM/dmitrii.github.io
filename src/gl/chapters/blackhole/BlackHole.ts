@@ -65,6 +65,13 @@ export class BlackHole implements Chapter {
   private obsAz = 0;
   private toggles = { lensing: 1, doppler: 1, redshift: 1, temperature: 5400 };
 
+  // things thrown in (see junk/Junk.ts)
+  /** brightening of the disk while it swallows debris, 0…2 */
+  flare = 0;
+  /** accretion rate shown in the readouts, in Eddington units (0 hides it) */
+  mdot = 0;
+  private shake = 0;
+
   private readonly trace: FullscreenPass;
   private readonly upsample: FullscreenPass;
   private target: WebGLRenderTarget;
@@ -300,8 +307,14 @@ export class BlackHole implements Chapter {
     const turnTarget = smoothstep(0.78, 0.97, this.progress) * (1 - smoothstep(0, 1, this.obsBlend)) * Math.PI;
     this.turn += (turnTarget - this.turn) * (dt > 0 ? damp(4.5, dt) : 1);
 
-    const st = Math.sin(this.incl);
-    this.camPos.set(this.r * st * Math.cos(this.az), this.r * Math.cos(this.incl), this.r * st * Math.sin(this.az));
+    // a short jolt when something is torn apart (decays in about half a second)
+    this.shake *= Math.exp(-dt * 5);
+    const t = this.time;
+    const jAz = this.shake * 0.006 * (Math.sin(t * 41) + 0.6 * Math.sin(t * 67 + 1.3));
+    const jIncl = this.shake * 0.005 * (Math.sin(t * 37 + 2.1) + 0.6 * Math.sin(t * 59));
+    const incl1 = this.incl + jIncl;
+    const st = Math.sin(incl1);
+    this.camPos.set(this.r * st * Math.cos(this.az + jAz), this.r * Math.cos(incl1), this.r * st * Math.sin(this.az + jAz));
     this.fwd.copy(this.camPos).multiplyScalar(-1).normalize();
     const worldUp = new Vector3(0, 1, 0);
     this.right.crossVectors(this.fwd, worldUp).normalize();
@@ -335,6 +348,26 @@ export class BlackHole implements Chapter {
     this.tanHalfFov = clamp(Math.tan(30 * DEG) / aspect, Math.tan(21 * DEG), Math.tan(36 * DEG));
   }
 
+  /** Camera jolt (kicks accumulate and decay). */
+  kick(amount: number) {
+    this.shake = Math.min(this.shake + amount, 2);
+  }
+
+  /** The current camera, for things drawn in the same frame (thrown objects). */
+  get view() {
+    return {
+      camPos: this.camPos,
+      right: this.right,
+      up: this.up,
+      fwd: this.fwd,
+      tanHalfFov: this.tanHalfFov,
+      lensShift: this.lensShift,
+      aspect: this.cssW / this.cssH,
+      lensing: this.toggles.lensing,
+      diskTemp: this.toggles.temperature,
+    };
+  }
+
   /** Start the opening camera move (call when the loader has gone). */
   startIntro(instant = false) {
     this.introRunning = true;
@@ -361,9 +394,11 @@ export class BlackHole implements Chapter {
     u.uLensing!.value = tg.lensing;
     u.uDoppler!.value = tg.doppler;
     u.uRedshift!.value = tg.redshift;
-    u.uDiskTemp!.value = tg.temperature;
+    // a tidal-disruption flare heats the whole disk toward blue-white and brightens it
+    u.uDiskTemp!.value = tg.temperature + 9000 * this.flare;
     // brighten slightly while diving so the photon ring carries the frame
-    u.uExposure!.value = (1 + 0.6 * smoothstep(0.7, 1, this.progress) + 2.5 * smoothstep(0.97, 1, this.progress)) * (0.15 + 0.85 * smoothstep(0, 0.6, this.intro));
+    u.uExposure!.value =
+      (1 + 0.6 * smoothstep(0.7, 1, this.progress) + 2.5 * smoothstep(0.97, 1, this.progress)) * (0.15 + 0.85 * smoothstep(0, 0.6, this.intro)) * (1 + 1.1 * this.flare);
   }
 
   prepare(renderer: WebGLRenderer) {
@@ -411,12 +446,14 @@ export class BlackHole implements Chapter {
   readouts(): Readout[] {
     const r = this.r;
     const l = this.loc;
-    return [
+    const out: Readout[] = [
       ['r', `${num(r, r < 1.1 ? 4 : r < 10 ? 2 : 1, l)} r_s`],
       ['i', `${num(this.incl / DEG, 1, l)}°`],
       [UI[l].readouts.clock, `${num(clockRate(r), clockRate(r) < 0.1 ? 4 : 3, l)} t∞`],
       ['M', `${num(6.5, 1, l)}×10⁹ M☉`],
     ];
+    if (this.mdot > 0.02) out.push(['Ṁ', `${num(this.mdot, this.mdot < 10 ? 2 : 1, l)} ${UI[l].junk.mdot}`]);
+    return out;
   }
 
   dispose() {

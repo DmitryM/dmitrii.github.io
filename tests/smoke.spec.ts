@@ -94,6 +94,48 @@ test('observatory opens, responds to controls and closes with Escape', async ({ 
   await expect(trigger).toBeFocused();
 });
 
+test('things thrown into the black hole are torn apart and swallowed', async ({ page }) => {
+  test.setTimeout(200_000);
+  const errors = consoleErrors(page);
+  await page.goto('/?quality=low');
+  await expect(page.locator('#loader')).toHaveClass(/is-done/, { timeout: 60_000 });
+  // the toy loads after the page is up
+  await expect(page.locator('html')).toHaveClass(/junk-ready/, { timeout: 30_000 });
+  const button = page.locator('.hero__actions [data-throw]');
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.locator('.junk-caption')).toHaveCount(1);
+  // a click on empty sky throws another one
+  const vp = page.viewportSize()!;
+  await page.mouse.click(vp.width * 0.92, vp.height * 0.18);
+  await expect(page.locator('.junk-caption')).toHaveCount(2);
+  // software rendering runs the simulation slowly: be patient
+  await expect(page.locator('[data-junk-log]')).toContainText('×', { timeout: 120_000 });
+  await expect(page.locator('[data-junk-log]')).toContainText('tidally disrupted');
+  expect(errors).toEqual([]);
+});
+
+test('on a touch screen a tap throws, and the hint speaks of tapping', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const page = await ctx.newPage();
+  const errors = consoleErrors(page);
+  await page.goto('/?quality=low');
+  await expect(page.locator('#loader')).toHaveClass(/is-done/, { timeout: 60_000 });
+  await expect(page.locator('html')).toHaveClass(/junk-ready/, { timeout: 30_000 });
+  await expect(page.locator('.hero__hint-coarse')).toBeVisible();
+  await expect(page.locator('.hero__hint-fine')).toBeHidden();
+  // tap the sky above the hero text
+  await page.touchscreen.tap(390 * 0.5, 844 * 0.18);
+  await expect(page.locator('.junk-caption')).toHaveCount(1);
+  // tapping the hero text does not throw
+  await page.locator('.hero__name').tap();
+  await page.waitForTimeout(500);
+  await expect(page.locator('.junk-caption')).toHaveCount(1);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
+
 test('mobile layout has no horizontal overflow', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage();

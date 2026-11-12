@@ -1,0 +1,140 @@
+/* ── "throw something in" ──────────────────────────────────── */
+.btn__toss {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #ffd23a, #ff7a1a);
+  box-shadow: 0 0 10px rgb(255 160 60 / 0.6);
+  transform: rotate(18deg);
+  transition: transform 0.6s var(--ease-out);
+}
+[data-throw]:hover .btn__toss {
+  transform: rotate(200deg) scale(0.9);
+}
+
+.hero__hint {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  margin-top: -4px;
+  animation: junk-in 1.2s var(--ease-out) both;
+}
+.hero__hint-coarse {
+  display: none;
+}
+@media (pointer: coarse) {
+  .hero__hint-fine {
+    display: none;
+  }
+  .hero__hint-coarse {
+    display: inline;
+  }
+}
+@keyframes junk-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* empty sky in the hero can be grabbed */
+@media (pointer: fine) {
+  .junk-ready .hero__sticky {
+    cursor: grab;
+  }
+  .junk-ready .hero__content {
+    cursor: auto;
+  }
+  .junk-holding,
+  .junk-holding * {
+    cursor: grabbing !important;
+    user-select: none;
+  }
+}
+
+/* captions that follow each object */
+.junk-captions {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.junk-caption {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(7 8 13 / 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ink-2);
+  will-change: transform, opacity;
+}
+
+/* the log after each annihilation */
+.junk-log {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hud-pad) + 4px);
+  z-index: 21;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  max-width: min(880px, calc(100vw - 2 * var(--gutter)));
+  padding: 9px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgb(7 8 13 / 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.03em;
+  color: var(--ink-2);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  transition:
+    opacity 0.9s var(--ease-out),
+    transform 0.9s var(--ease-out);
+}
+.junk-log.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-duration: 0.45s;
+}
+.junk-log__count {
+  flex: none;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.junk-log__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .junk-log {
+    flex-direction: column;
+    gap: 2px;
+    border-radius: 14px;
+    width: calc(100vw - 2 * var(--gutter));
+  }
+  .junk-log__line {
+    white-space: normal;
+  }
+}
+
+.obs__throw {
+  justify-self: start;
+}

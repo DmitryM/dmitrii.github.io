@@ -31,19 +31,60 @@ Personal site of **Dmitrii Malikov**, Software Engineer in Barcelona. It is a re
 - **Old stars.** They follow a flat rotation curve, the dark-matter signature.
 - **Arm population.** Young O/B stars, H II regions and dust trace two trailing log-spiral arms (pitch 13°) that rotate rigidly at the pattern speed.
 
-The maths is unit-tested in `tests/physics.test.ts`:
+### Feed the black hole (`src/physics/infall.ts`, `src/gl/chapters/blackhole/junk`)
+In the hero (and in the observatory) visitors can throw things in. They are 14 procedural "designer toy" models built from three.js primitives, with no asset files:
+- a beige PC showing a blue screen
+- cold coffee
+- a rubber duck
+- the printer
+- a bug
+- spaghetti code
+- a floppy disk
+- a pager
+- `node_modules`
+- a Friday calendar page
+- a TODO sticky note
+- a laptop on fire
+- an hourglass (the estimate)
+- a USB plug
+
+**Interaction:**
+- **Mouse:** press on empty sky to pick the next object up, then release to fling it. A plain click drops it in.
+- **Touch:** a tap throws.
+- **Observatory:** a tap throws, and dragging still orbits.
+- **"Throw something in" button:** tosses one in from the edge of the view.
+
+Each object gets a caption while it flies, and a log line once it's gone.
+
+**What happens to it** is a tidal disruption event:
+- **Orbit.** The body falls on a Paczyński–Wiita orbit (Φ = −GM/(r − r_s)). This potential has the Schwarzschild ISCO at 3 r_s and the marginally bound orbit at 2 r_s. Launches are aimed so that the pericentre lies outside the centrifugal barrier, so the body whips around the hole instead of dropping straight in.
+- **Tidal stretching.** The body is stretched along the radial direction and squeezed across it, growing as r⁻³. Inside the tidal radius (≈ 6.5 r_s) it comes apart from the side facing the hole, along a glowing dissolve front.
+- **Debris.** Surface samples become free particles that carry the local velocity of the body.
+  - The more bound half dives in, and the rest is flung out in a long stream.
+  - Shocks then circularise the stream (drag toward sub-Keplerian rotation in the disk plane), and it drains through the ISCO.
+- **Lensing.** Objects and debris are lensed with Beloborodov's (2002) approximation, 1 − cos α = (1 − cos ψ)(1 − r_s/r), so a stream behind the hole arcs over its shadow like the far side of the disk.
+- **Colour and brightness.** Debris heats to T ∝ r^−3/4. Its colour is shifted and its brightness scaled by g⁴, where g combines the relativistic Doppler factor and √(1 − r_s/r). The approaching side is therefore blue-white, and the gas reddens and fades at the horizon.
+- **The flare.** The accretion rate (shown as Ṁ in the readouts) heats the whole disk toward blue-white and brightens it. A disruption also jolts the camera and adds a short radial blur, except with reduced motion.
+
+`?debug` exposes the chapter as `__junk`; set `__junk.timeScale = 0.1` for slow motion.
+
+The maths is unit-tested in `tests/physics.test.ts` and `tests/infall.test.ts`:
 - critical-impact-parameter capture
 - weak-field deflection 2r_s/b
 - ⟨r⟩ = (3n² − l(l+1))/2
 - spectral lines
 - blackbody white point
+- the Paczyński–Wiita ISCO and marginally bound orbit
+- Beloborodov lensing limits
+- the Doppler factor
+- that every aimed throw is torn apart and swallowed
 
 ## Commands
 
 ```bash
 npm install
 npm run dev          # http://localhost:5173
-npm test             # physics + content unit tests (vitest)
+npm test             # physics, content and model unit tests (vitest)
 npm run test:e2e     # Playwright smoke tests against a production build
 npm run typecheck
 npm run build        # static site in dist/

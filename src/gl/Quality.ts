@@ -12,15 +12,17 @@ export interface Tier {
   diskSamples: number;
   orbitalParticles: number;
   galaxyStars: number;
+  /** debris particles for things thrown into the black hole */
+  junkParticles: number;
   bloomLevels: number;
   dprCap: number;
 }
 
 export const TIERS: Record<TierName, Tier> = {
-  low: { name: 'low', bhSteps: 120, bhScale: 0.5, diskSamples: 1, orbitalParticles: 110_000, galaxyStars: 70_000, bloomLevels: 5, dprCap: 1 },
-  medium: { name: 'medium', bhSteps: 160, bhScale: 0.66, diskSamples: 2, orbitalParticles: 200_000, galaxyStars: 120_000, bloomLevels: 6, dprCap: 1.5 },
-  high: { name: 'high', bhSteps: 220, bhScale: 0.85, diskSamples: 4, orbitalParticles: 340_000, galaxyStars: 190_000, bloomLevels: 7, dprCap: 2 },
-  ultra: { name: 'ultra', bhSteps: 300, bhScale: 1, diskSamples: 6, orbitalParticles: 520_000, galaxyStars: 260_000, bloomLevels: 8, dprCap: 2 },
+  low: { name: 'low', bhSteps: 120, bhScale: 0.5, diskSamples: 1, orbitalParticles: 110_000, galaxyStars: 70_000, junkParticles: 8_000, bloomLevels: 5, dprCap: 1 },
+  medium: { name: 'medium', bhSteps: 160, bhScale: 0.66, diskSamples: 2, orbitalParticles: 200_000, galaxyStars: 120_000, junkParticles: 14_000, bloomLevels: 6, dprCap: 1.5 },
+  high: { name: 'high', bhSteps: 220, bhScale: 0.85, diskSamples: 4, orbitalParticles: 340_000, galaxyStars: 190_000, junkParticles: 20_000, bloomLevels: 7, dprCap: 2 },
+  ultra: { name: 'ultra', bhSteps: 300, bhScale: 1, diskSamples: 6, orbitalParticles: 520_000, galaxyStars: 260_000, junkParticles: 28_000, bloomLevels: 8, dprCap: 2 },
 };
 
 const ORDER: TierName[] = ['low', 'medium', 'high', 'ultra'];

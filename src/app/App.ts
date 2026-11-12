@@ -22,6 +22,7 @@ import { buildBlackbodyLUT } from '../physics/blackbody';
 import { Hud } from '../ui/Hud';
 import { damp, smoothstep } from '../gl/util';
 import type { OrbitalBuffers } from '../gl/chapters/orbitals/sampler.worker';
+import type { Junk } from '../gl/chapters/blackhole/junk/Junk';
 
 export interface AppOptions {
   params: URLSearchParams;
@@ -58,6 +59,11 @@ export class App {
   blackhole!: BlackHole;
   orbitals: Orbitals | null = null;
   galaxy: Galaxy | null = null;
+  /** things thrown into the black hole (loaded after the page is up) */
+  junk: Junk | null = null;
+  private pulse = 0;
+  private bloomBase = 1;
+  private bloomBoosted = false;
   private readonly flash = new Flash();
   private lastScale = NaN;
   private blur = 0;
@@ -175,6 +181,23 @@ export class App {
     if (this.capture) this.blackhole.startIntro(true);
     if (params.has('debug')) void this.attachDebug();
     if (this.capture) (window as unknown as { __captureReady?: boolean }).__captureReady = false;
+  }
+
+  /**
+   * Loads the "throw something in" toy: its code, decal atlas and shader programs. Called once the
+   * page is interactive, so it never delays the loader. Null for captures.
+   */
+  async loadJunk(): Promise<Junk | null> {
+    if (this.capture || this.junk) return this.junk;
+    const [{ Junk }, { makeDecalAtlas }] = await Promise.all([import('../gl/chapters/blackhole/junk/Junk'), import('../gl/chapters/blackhole/junk/decals')]);
+    const atlas = await makeDecalAtlas();
+    const junk = new Junk(this.blackhole, this.lut, atlas, this.tier, { reduced: this.opts.reduced });
+    await junk.compile(this.renderer);
+    this.chapters.splice(this.chapters.indexOf(this.blackhole) + 1, 0, junk);
+    this.junk = junk;
+    this.bloomBase = this.composer.bloom.intensity;
+    this.resize();
+    return junk;
   }
 
   private sampleOrbitals(states: ReturnType<typeof readOrbitalStates>, count: number, onProgress: (p: number) => void): Promise<OrbitalBuffers> {
@@ -347,10 +370,31 @@ export class App {
     }
     this.flash.weight = j.flash;
     this.flash.progress = j.burst;
+    const junk = this.junk;
+    if (junk) {
+      junk.weight = junk.alive ? bh.weight : 0;
+      bh.flare = junk.flare;
+      bh.mdot = junk.mdot;
+    }
 
     this.active = warmup ? this.chapters : this.chapters.filter((c) => c.weight > 0.002);
     // cameras keep easing while a chapter is invisible (cheap, CPU-only), so returning is seamless
     for (const c of this.chapters) c.update(f);
+    if (junk) {
+      // a jolt when something is torn apart, and as the flare rises
+      const k = junk.takeKick();
+      if (!this.opts.reduced && !warmup) {
+        bh.kick(k);
+        this.pulse = Math.max(this.pulse, Math.min(k, 1.5));
+      }
+      if (junk.flare > 0) {
+        this.composer.bloom.intensity = this.bloomBase + 0.45 * junk.flare;
+        this.bloomBoosted = true;
+      } else if (this.bloomBoosted) {
+        this.composer.bloom.intensity = this.bloomBase;
+        this.bloomBoosted = false;
+      }
+    }
     this.composer.render(dt);
 
     // ── HUD ──
@@ -367,7 +411,11 @@ export class App {
       const rate = Number.isFinite(this.lastScale) ? Math.abs(scale - this.lastScale) / dt : 0;
       const target = this.opts.reduced ? 0 : Math.min(0.16, Math.max(0, rate - 0.6) * 0.0065);
       this.blur += (target - this.blur) * damp(target > this.blur ? 14 : 5, dt);
-      this.composer.setZoomBlur(this.blur);
+      // a short radial smear centred on the hole when something is torn apart
+      this.pulse *= Math.exp(-dt * 4.5);
+      const pulse = 0.045 * this.pulse;
+      if (pulse > this.blur) this.composer.setZoomBlur(pulse, (bh.lensShift.x + 1) / 2, (bh.lensShift.y + 1) / 2);
+      else this.composer.setZoomBlur(this.blur);
     }
     this.lastScale = scale;
     if (orb) this.hud.setOrbital(j.orbital);

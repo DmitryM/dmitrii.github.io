@@ -16,7 +16,11 @@ export class Observatory {
   private drag: { id: number; x: number; y: number } | null = null;
   private readonly touches = new Map<number, { x: number; y: number }>();
   private pinch = 0;
+  /** a press that may turn out to be a tap (not a drag or a pinch) */
+  private press: { id: number; x: number; y: number; t: number } | null = null;
   private readonly loc = clientLocale();
+  /** called for a tap on the sky (no drag) while observing; CSS pixels */
+  onTap: ((x: number, y: number) => void) | null = null;
 
   constructor(
     private readonly bh: BlackHole,
@@ -123,6 +127,7 @@ export class Observatory {
       if (!this.open) return;
       c.setPointerCapture(e.pointerId);
       this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.press = this.touches.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() } : null;
       if (this.touches.size === 1) this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
       document.documentElement.classList.add('dragging');
     });
@@ -144,6 +149,11 @@ export class Observatory {
       }
     });
     const end = (e: PointerEvent) => {
+      const p = this.press;
+      if (p && p.id === e.pointerId && e.type === 'pointerup' && this.open) {
+        this.press = null;
+        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6 && performance.now() - p.t < 350) this.onTap?.(e.clientX, e.clientY);
+      }
       this.touches.delete(e.pointerId);
       if (this.touches.size < 2) this.pinch = 0;
       if (this.drag?.id === e.pointerId) this.drag = null;

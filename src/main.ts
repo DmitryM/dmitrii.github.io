@@ -10,6 +10,7 @@ import './styles/base.css';
 import './styles/chrome.css';
 import './styles/sections.css';
 import './styles/observatory.css';
+import './styles/junk.css';
 import './styles/print.css';
 
 import { App } from './app/App';
@@ -76,6 +77,22 @@ async function start() {
   motion.intro();
   motion.refresh();
   app.director.measure();
+
+  // "throw something in": loaded once the page is up, so it never delays the first frame
+  if (params.has('capture')) return;
+  const idle = (fn: () => void) => (typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 800));
+  idle(async () => {
+    try {
+      const junk = await app.loadJunk();
+      if (!junk) return;
+      const { Feeder } = await import('./ui/Feeder');
+      const feeder = new Feeder(junk, app.blackhole, observatory);
+      motion.onFrame(() => feeder.update());
+      if (params.has('debug')) Object.assign(window, { __junk: junk });
+    } catch (err) {
+      console.warn('[junk] unavailable:', err);
+    }
+  });
 }
 
 void start();

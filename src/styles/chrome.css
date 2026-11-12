@@ -419,6 +419,8 @@ html:not(.js) .poster,
 .capture .rail,
 .capture .readouts,
 .capture .observe-fab,
+.capture .junk-captions,
+.capture .junk-log,
 .capture .loader {
   display: none !important;
 }

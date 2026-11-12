@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { contactLinks, esc, jsonLd, localeForPath, renderBody, renderHead, renderPage } from '../src/content/render.ts';
 import { rolesFor, site } from '../src/content/site.ts';
-import { LOCALES, UI } from '../src/i18n/index.ts';
+import { JUNK_IDS, LOCALES, UI } from '../src/i18n/index.ts';
 
 const shell = '<html lang="en"><head><!--@head--></head><body><!--@body--></body></html>';
 
@@ -91,6 +91,25 @@ describe('content rendering', () => {
       });
     });
   }
+
+  it('names, captions and epitaphs every throwable object in every language', () => {
+    for (const loc of LOCALES) {
+      const items = UI[loc].junk.items;
+      expect(Object.keys(items).sort()).toEqual([...JUNK_IDS].sort());
+      for (const id of JUNK_IDS) {
+        const [name, caption, epitaph] = items[id];
+        expect(name.length, `${loc}/${id}`).toBeGreaterThan(0);
+        expect(caption.length, `${loc}/${id} caption`).toBeLessThanOrEqual(40);
+        expect(epitaph.length, `${loc}/${id} epitaph`).toBeGreaterThan(0);
+      }
+      expect(UI[loc].junk.log).toContain('{name}');
+      expect(UI[loc].junk.log).toContain('{r}');
+      expect(UI[loc].junk.log).toContain('{epitaph}');
+      const body = renderBody(loc);
+      expect(body).toContain('data-throw');
+      expect(body).toContain('data-junk-log');
+    }
+  });
 
   it('hides empty contact slots and obfuscates email', () => {
     expect(contactLinks({ linkedin: '', email: '', github: '', telegram: '' })).toHaveLength(0);

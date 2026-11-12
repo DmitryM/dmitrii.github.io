@@ -271,6 +271,8 @@ export function renderBody(loc: Locale = 'en'): string {
   <nav class="rail" aria-label="${esc(ui.chaptersNav)}"><ol>${rail}</ol></nav>
   <aside class="readouts" aria-hidden="true"><dl data-readouts></dl></aside>
   <button class="observe-fab js-only" type="button" data-observe hidden>${esc(ui.observe)}</button>
+  <div class="junk-captions" data-junk-captions aria-hidden="true"></div>
+  <p class="junk-log js-only" data-junk-log role="status" aria-live="polite" hidden></p>
 
   <main id="main">
     <section class="chapter hero" id="horizon" aria-labelledby="hero-title">
@@ -284,8 +286,10 @@ export function renderBody(loc: Locale = 'en'): string {
           }</p>
           <div class="hero__actions" data-reveal>
             <button class="btn btn--primary js-only" type="button" data-observe hidden><span class="btn__dot" aria-hidden="true"></span>${esc(hero.observe)}</button>
+            <button class="btn js-only" type="button" data-throw hidden><span class="btn__toss" aria-hidden="true"></span>${esc(ui.junk.throw)}</button>
             <a class="btn btn--ghost" href="#about">${esc(hero.scrollHint)} <span aria-hidden="true">↓</span></a>
           </div>
+          <p class="hero__hint js-only" data-throw-hint hidden><span class="hero__hint-fine">${esc(ui.junk.hint)}</span><span class="hero__hint-coarse">${esc(ui.junk.hintTouch)}</span></p>
         </div>
       </div>
     </section>
@@ -370,6 +374,7 @@ function renderObservatory(loc: Locale): string {
       ${range('temperature', o.temperature, 3000, 20000, 100, 5400)}
       ${range('inclination', o.inclination, 1, 89, 1, 84)}
       ${range('distance', o.distance, 4, 60, 0.5, 26)}
+      <button class="btn obs__throw js-only" type="button" data-throw hidden><span class="btn__toss" aria-hidden="true"></span>${esc(UI[loc].junk.throw)}</button>
     </form>
   </div>`;
 }

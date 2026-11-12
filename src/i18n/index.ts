@@ -28,6 +28,26 @@ export function sig(x: number, loc: Locale, digits = 3): string {
   return num(s, Math.min(d, (s.toString().split('.')[1] ?? '').length), loc);
 }
 
+/** Things a visitor can throw into the black hole (models in src/gl/chapters/blackhole/junk/models.ts). */
+export const JUNK_IDS = ['pc', 'mug', 'duck', 'printer', 'bug', 'spaghetti', 'floppy', 'pager', 'nodeModules', 'calendar', 'sticky', 'laptop', 'hourglass', 'usb'] as const;
+export type JunkId = (typeof JUNK_IDS)[number];
+
+export interface JunkStrings {
+  /** button that throws the next object from the edge of the view */
+  throw: string;
+  /** hint under the hero buttons, for mouse / touch */
+  hint: string;
+  hintTouch: string;
+  /** log line after an object is swallowed: {name} {r} {epitaph} */
+  log: string;
+  /** label after the running count */
+  count: string;
+  /** readout: accretion rate in Eddington units */
+  mdot: string;
+  /** [short name, caption while it flies, epitaph in the log] */
+  items: Record<JunkId, [string, string, string]>;
+}
+
 export interface UIStrings {
   skip: string;
   backToTop: string;
@@ -60,6 +80,7 @@ export interface UIStrings {
     inclination: [string, string];
     distance: [string, string];
   };
+  junk: JunkStrings;
 }
 
 export const UI: Record<Locale, UIStrings> = {
@@ -107,7 +128,7 @@ export const UI: Record<Locale, UIStrings> = {
       title: 'Schwarzschild black hole',
       close: 'Return',
       closeAria: 'Close the observatory',
-      hint: 'Drag to orbit · scroll or pinch to change distance · <kbd>Esc</kbd> to return',
+      hint: 'Drag to orbit · scroll or pinch to change distance · tap to throw something in · <kbd>Esc</kbd> to return',
       legend: 'Physical effects',
       lensing: ['Gravitational lensing', 'Light follows null geodesics of the Schwarzschild metric. Off: straight lines.'],
       doppler: ['Doppler beaming', 'Gas orbits at up to c/2. Approaching light is blueshifted and boosted by δ⁴.'],
@@ -115,6 +136,30 @@ export const UI: Record<Locale, UIStrings> = {
       temperature: ['Disk temperature', 'Peak of the Novikov–Thorne profile, at r ≈ 4.1 r<sub>s</sub>.'],
       inclination: ['Inclination', 'Angle between the line of sight and the disk axis.'],
       distance: ['Distance', 'Inside 1.5 r<sub>s</sub> lies the photon sphere; the ISCO is at 3 r<sub>s</sub>.'],
+    },
+    junk: {
+      throw: 'Throw something in',
+      hint: 'or click near the black hole · drag to fling',
+      hintTouch: 'or tap near the black hole',
+      log: '{name} · tidally disrupted at {r} r_s — {epitaph}',
+      count: 'annihilated',
+      mdot: 'Ṁ<sub>Edd</sub>',
+      items: {
+        pc: ['beige PC', 'the prod server under someone’s desk', 'Nobody knew what it ran.'],
+        mug: ['coffee', 'cold coffee №4', 'Brewing another.'],
+        duck: ['rubber duck', 'rubber duck, out of ideas', 'It listened. It understood. It’s gone.'],
+        printer: ['printer', 'it was always the printer', 'Paper jam: permanent.'],
+        bug: ['bug', 'bug in production', 'Annihilated. Reopened next sprint.'],
+        spaghetti: ['spaghetti code', 'spaghetti code', 'Spaghettified. Finally consistent.'],
+        floppy: ['floppy disk', 'unsaved changes', 'Should’ve pressed Ctrl+S.'],
+        pager: ['pager', 'on-call, 3 a.m.', 'Alert resolved. Permanently.'],
+        nodeModules: ['node_modules', 'node_modules (careful, heavy)', 'Heaviest object in the known universe.'],
+        calendar: ['Friday', 'Friday deploy', 'Rolled back across the event horizon.'],
+        sticky: ['sticky note', 'TODO: fix later', 'Later never came.'],
+        laptop: ['laptop', 'works on my machine', 'Your machine is gone now.'],
+        hourglass: ['estimate', 'estimate: 2 hours', 'Time dilation: estimate now ∞.'],
+        usb: ['USB plug', 'USB, wrong way up (3rd try)', 'Third side fits.'],
+      },
     },
   },
   ru: {
@@ -161,7 +206,7 @@ export const UI: Record<Locale, UIStrings> = {
       title: 'Чёрная дыра Шварцшильда',
       close: 'Назад',
       closeAria: 'Закрыть обсерваторию',
-      hint: 'Тяните, чтобы облететь · колесо или щипок — расстояние · <kbd>Esc</kbd> — назад',
+      hint: 'Тяните, чтобы облететь · колесо или щипок — расстояние · касание — бросить что-нибудь · <kbd>Esc</kbd> — назад',
       legend: 'Физические эффекты',
       lensing: ['Гравитационное линзирование', 'Свет идёт по нулевым геодезическим метрики Шварцшильда. Выкл.: прямые лучи.'],
       doppler: ['Доплеровское усиление', 'Газ обращается со скоростью до c/2. Свет приближающейся стороны смещён в синее и усилен как δ⁴.'],
@@ -169,6 +214,30 @@ export const UI: Record<Locale, UIStrings> = {
       temperature: ['Температура диска', 'Пик профиля Новикова — Торна, при r ≈ 4,1 r<sub>s</sub>.'],
       inclination: ['Наклон', 'Угол между лучом зрения и осью диска.'],
       distance: ['Расстояние', 'Внутри 1,5 r<sub>s</sub> — фотонная сфера; последняя устойчивая орбита — 3 r<sub>s</sub>.'],
+    },
+    junk: {
+      throw: 'Бросить что-нибудь',
+      hint: 'или кликните рядом с чёрной дырой · потяните, чтобы метнуть',
+      hintTouch: 'или коснитесь экрана рядом с чёрной дырой',
+      log: '{name} · приливный разрыв на {r} r_s — {epitaph}',
+      count: 'аннигилировано',
+      mdot: 'Ṁ<sub>Edd</sub>',
+      items: {
+        pc: ['бежевый ПК', 'прод-сервер под чьим-то столом', 'Никто не знал, что на нём крутилось.'],
+        mug: ['кофе', 'остывший кофе №4', 'Завариваю следующий.'],
+        duck: ['резиновая уточка', 'уточка, идеи кончились', 'Она слушала. Она поняла. Её больше нет.'],
+        printer: ['принтер', 'во всём виноват принтер', 'Замятие бумаги: навсегда.'],
+        bug: ['баг', 'баг в проде', 'Аннигилирован. Переоткроют в следующем спринте.'],
+        spaghetti: ['спагетти-код', 'спагетти-код', 'Спагеттифицирован. Наконец-то единообразно.'],
+        floppy: ['дискета', 'несохранённые изменения', 'Надо было нажать Ctrl+S.'],
+        pager: ['пейджер', 'дежурство, 3 часа ночи', 'Алерт закрыт. Навсегда.'],
+        nodeModules: ['node_modules', 'node_modules (осторожно, тяжёлое)', 'Самый тяжёлый объект во Вселенной.'],
+        calendar: ['пятница', 'деплой в пятницу', 'Откатили за горизонт событий.'],
+        sticky: ['стикер', 'TODO: поправить потом', '«Потом» так и не наступило.'],
+        laptop: ['ноутбук', 'у меня всё работает', 'Твоей машины больше нет.'],
+        hourglass: ['оценка', 'оценка: 2 часа', 'Замедление времени: оценка теперь ∞.'],
+        usb: ['USB-штекер', 'USB не той стороной (3-я попытка)', 'Третья сторона подошла.'],
+      },
     },
   },
 };

@@ -89,14 +89,13 @@ All text lives in **`src/content/site.ts`**: shared facts (dates, links, quantum
 
 ## Deploying (GitHub Pages)
 
-`.github/workflows/deploy.yml` runs on every push to `main`:
+`.github/workflows/deploy.yml` runs on every push to `master` (repository `DmitryM/dmitrii.github.io`):
 1. typecheck
 2. unit tests
 3. e2e tests
 4. build
 5. deploy to Pages
 
-To switch over:
-1. Push this project to the repository that currently serves **malikov.page**, replacing the old `index.html`.
-2. In that repository, set **Settings → Pages → Source** to **GitHub Actions**.
-3. `public/CNAME` keeps the custom domain. `dmitrii.page` keeps redirecting to it through redirect.pizza.
+Pages is configured with **Source: GitHub Actions** and the custom domain **malikov.page**; `dmitrii.page` keeps redirecting to it through redirect.pizza.
+
+The previous static résumé is preserved: it is part of `master`'s history (joined with a merge commit), on the branch `legacy-static-site`, and tagged `v1-static`.

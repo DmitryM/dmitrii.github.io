@@ -64,6 +64,8 @@ html:not(.js) .poster,
 .loader.is-done {
   opacity: 0;
   visibility: hidden;
+  /* the page is usable while the loader fades out */
+  pointer-events: none;
 }
 .loader__wave {
   width: min(480px, 78vw);

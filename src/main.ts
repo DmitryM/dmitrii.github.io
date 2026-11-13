@@ -88,7 +88,7 @@ async function start() {
       const { Feeder } = await import('./ui/Feeder');
       const feeder = new Feeder(junk, app.blackhole, observatory);
       motion.onFrame(() => feeder.update());
-      if (params.has('debug')) Object.assign(window, { __junk: junk });
+      if (params.has('debug')) Object.assign(window, { __junk: junk, __feeder: feeder });
     } catch (err) {
       console.warn('[junk] unavailable:', err);
     }

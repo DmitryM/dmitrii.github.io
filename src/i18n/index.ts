@@ -38,6 +38,8 @@ export interface JunkStrings {
   /** hint under the hero buttons, for mouse / touch */
   hint: string;
   hintTouch: string;
+  /** accessible name of a drifting object's caption button: {name} */
+  throwIt: string;
   /** log line after an object is swallowed: {name} {r} {epitaph} */
   log: string;
   /** label after the running count */
@@ -139,8 +141,9 @@ export const UI: Record<Locale, UIStrings> = {
     },
     junk: {
       throw: 'Throw something in',
-      hint: 'or click near the black hole · drag to fling',
-      hintTouch: 'or tap near the black hole',
+      hint: 'Click something drifting by, or anywhere near the black hole, to throw it in · drag to fling',
+      hintTouch: 'Tap something drifting by, or near the black hole, to throw it in',
+      throwIt: 'Throw into the black hole: {name}',
       log: '{name} · tidally disrupted at {r} r_s — {epitaph}',
       count: 'annihilated',
       mdot: 'Ṁ<sub>Edd</sub>',
@@ -217,8 +220,9 @@ export const UI: Record<Locale, UIStrings> = {
     },
     junk: {
       throw: 'Бросить что-нибудь',
-      hint: 'или кликните рядом с чёрной дырой · потяните, чтобы метнуть',
-      hintTouch: 'или коснитесь экрана рядом с чёрной дырой',
+      hint: 'Кликните по пролетающему предмету или рядом с чёрной дырой, чтобы бросить его туда · потяните, чтобы метнуть',
+      hintTouch: 'Коснитесь пролетающего предмета или экрана рядом с чёрной дырой, чтобы бросить',
+      throwIt: 'Бросить в чёрную дыру: {name}',
       log: '{name} · приливный разрыв на {r} r_s — {epitaph}',
       count: 'аннигилировано',
       mdot: 'Ṁ<sub>Edd</sub>',

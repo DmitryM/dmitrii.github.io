@@ -10,12 +10,13 @@ interface Sample {
 }
 
 /**
- * "Throw something in": the gestures, buttons, captions and log around the Junk chapter.
+ * "Throw something in": the gestures, drifting objects, captions and log around the Junk chapter.
+ *  - every so often something drifts through the view; click (or tap) it, or its caption, and it
+ *    goes in keeping its momentum — or grab it with the mouse and fling it;
  *  - mouse / pen in the hero: press on empty sky to pick the next object up, release to fling it
  *    (a plain click drops it in);
  *  - touch: a tap throws from that point (a scroll gesture is left alone);
- *  - observatory: a tap on the sky throws, a drag still orbits;
- *  - the "Throw something in" buttons toss one in from the edge of the view.
+ *  - observatory: a tap on the sky throws, a drag still orbits; its panel has a throw button.
  */
 export class Feeder {
   private readonly loc = clientLocale();
@@ -23,7 +24,9 @@ export class Feeder {
   private readonly root = document.documentElement;
   private readonly layer = document.querySelector<HTMLElement>('[data-junk-captions]');
   private readonly log = document.querySelector<HTMLElement>('[data-junk-log]');
-  private readonly captionEls = new Map<number, HTMLElement>();
+  private readonly captionEls = new Map<number, { el: HTMLElement; drifting: boolean; width: number }>();
+  /** when the next object may drift by (performance.now() ms) */
+  private nextDrift = performance.now() + 2500;
   private readonly list: Caption[] = [];
   private deck: JunkId[] = [];
   private last: JunkId | null = null;
@@ -43,7 +46,7 @@ export class Feeder {
       b.addEventListener('click', () => this.throwFromEdge());
     });
     document.querySelectorAll<HTMLElement>('[data-throw-hint]').forEach((h) => (h.hidden = false));
-    if (observatory) observatory.onTap = (x, y) => this.junk.throwAt(this.next(), x, y);
+    if (observatory) observatory.onTap = (x, y) => this.throwAtPoint(x, y);
     this.bindPointer();
     this.root.classList.add('junk-ready');
   }
@@ -77,16 +80,29 @@ export class Feeder {
         this.tap = { pointer: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
         return;
       }
-      // mouse / pen: pick it up (and keep the pointer even if it leaves the window)
+      // mouse / pen: grab the drifting object under the pointer, or pick up a new one
+      // (and keep the pointer even if it leaves the window)
       e.preventDefault();
       (e.target as Element).setPointerCapture?.(e.pointerId);
-      this.holding = { uid: this.junk.hold(this.next(), e.clientX, e.clientY), pointer: e.pointerId, samples: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
+      const hit = this.junk.pick(e.clientX, e.clientY);
+      let uid: number;
+      if (hit !== null) {
+        this.junk.grab(hit, e.clientX, e.clientY);
+        uid = hit;
+      } else uid = this.junk.hold(this.next(), e.clientX, e.clientY);
+      this.holding = { uid, pointer: e.pointerId, samples: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
+      this.root.classList.remove('junk-hover');
       this.root.classList.add('junk-holding');
     });
     window.addEventListener(
       'pointermove',
       (e) => {
         const h = this.holding;
+        if (!h && e.pointerType === 'mouse') {
+          // a pointer cursor over something drifting by
+          const over = (this.root.classList.contains('observing') || this.canThrowHere(e)) && this.junk.pick(e.clientX, e.clientY) !== null;
+          this.root.classList.toggle('junk-hover', over);
+        }
         if (!h || e.pointerId !== h.pointer) return;
         this.junk.moveHeld(h.uid, e.clientX, e.clientY);
         h.samples.push({ x: e.clientX, y: e.clientY, t: performance.now() });
@@ -98,7 +114,7 @@ export class Feeder {
       const tap = this.tap;
       if (tap && tap.pointer === e.pointerId) {
         this.tap = null;
-        if (Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12 && performance.now() - tap.t < 500) this.junk.throwAt(this.next(), e.clientX, e.clientY);
+        if (Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12 && performance.now() - tap.t < 500) this.throwAtPoint(e.clientX, e.clientY);
       }
       const h = this.holding;
       if (h && h.pointer === e.pointerId) {
@@ -134,6 +150,13 @@ export class Feeder {
     return { vx: (last.x - first.x) / dt, vy: (last.y - first.y) / dt };
   }
 
+  /** A tap or click: the drifting object there goes in, otherwise a new one is thrown from there. */
+  private throwAtPoint(x: number, y: number) {
+    const hit = this.junk.pick(x, y);
+    if (hit !== null) this.junk.throwDrifter(hit);
+    else this.junk.throwAt(this.next(), x, y);
+  }
+
   /** Tosses the next object in from near the edge of the view, swinging around the hole. */
   private throwFromEdge() {
     const W = window.innerWidth;
@@ -154,7 +177,25 @@ export class Feeder {
   update() {
     let e: JunkEvent | undefined;
     while ((e = this.junk.events.shift())) this.onEvent(e);
+    this.scheduleDrifters();
     this.placeCaptions();
+  }
+
+  /**
+   * Now and then something drifts by, one or two at a time, while the hole is in view. Not with
+   * reduced motion: nothing moves that the visitor didn't set moving.
+   */
+  private scheduleDrifters() {
+    if (this.junk.reduced) return;
+    const now = performance.now();
+    const visible = (this.bh.inHero || this.root.classList.contains('observing')) && document.visibilityState === 'visible';
+    if (!visible) {
+      this.nextDrift = Math.max(this.nextDrift, now + 2000);
+      return;
+    }
+    if (now < this.nextDrift || this.junk.drifting >= 2) return;
+    const spawned = this.junk.spawnDrifter(this.next()) !== null;
+    this.nextDrift = now + (spawned ? 7000 + Math.random() * 8000 : 1500);
   }
 
   private onEvent(e: JunkEvent) {
@@ -190,20 +231,43 @@ export class Feeder {
     const seen = new Set<number>();
     for (const c of list) {
       seen.add(c.uid);
-      let el = this.captionEls.get(c.uid);
-      if (!el) {
-        el = document.createElement('span');
-        el.className = 'junk-caption';
-        el.textContent = this.t.items[c.id][1];
-        this.layer.append(el);
-        this.captionEls.set(c.uid, el);
+      let entry = this.captionEls.get(c.uid);
+      // a drifting object's caption is a button (keyboard users can throw it too); once it is on
+      // its way in, a plain label
+      if (entry && entry.drifting !== c.drifting) {
+        entry.el.remove();
+        entry = undefined;
       }
-      el.style.transform = `translate3d(${c.x.toFixed(1)}px, ${(c.y + c.radius * 0.95 + 10).toFixed(1)}px, 0) translateX(-50%)`;
-      el.style.opacity = c.alpha.toFixed(3);
+      if (!entry) {
+        const caption = this.t.items[c.id][1];
+        let el: HTMLElement;
+        if (c.drifting) {
+          const uid = c.uid;
+          el = document.createElement('button');
+          el.setAttribute('type', 'button');
+          el.className = 'junk-caption junk-caption--drifter';
+          el.setAttribute('aria-label', this.t.throwIt.replace('{name}', this.t.items[c.id][0]));
+          el.textContent = caption;
+          el.addEventListener('click', () => this.junk.throwDrifter(uid));
+        } else {
+          el = document.createElement('span');
+          el.className = 'junk-caption';
+          el.setAttribute('aria-hidden', 'true');
+          el.textContent = caption;
+        }
+        this.layer.append(el);
+        entry = { el, drifting: c.drifting, width: 0 };
+        this.captionEls.set(c.uid, entry);
+      }
+      // centred under the object, but kept inside the view
+      const half = (entry.width ||= entry.el.offsetWidth) / 2;
+      const x = Math.min(Math.max(c.x, half + 8), window.innerWidth - half - 8);
+      entry.el.style.transform = `translate3d(${x.toFixed(1)}px, ${(c.y + c.radius * 0.95 + 10).toFixed(1)}px, 0) translateX(-50%)`;
+      entry.el.style.opacity = c.alpha.toFixed(3);
     }
-    for (const [uid, el] of this.captionEls) {
+    for (const [uid, entry] of this.captionEls) {
       if (!seen.has(uid)) {
-        el.remove();
+        entry.el.remove();
         this.captionEls.delete(uid);
       }
     }

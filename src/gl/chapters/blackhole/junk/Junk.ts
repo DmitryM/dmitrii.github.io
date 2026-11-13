@@ -53,9 +53,11 @@ export interface Caption {
   y: number;
   radius: number;
   alpha: number;
+  /** drifting by on its own (click it to throw it in) */
+  drifting: boolean;
 }
 
-type State = 'held' | 'falling' | 'shredding' | 'done';
+type State = 'drifting' | 'held' | 'falling' | 'shredding' | 'done';
 
 interface Body {
   uid: number;
@@ -68,6 +70,11 @@ interface Body {
   v: Vector3;
   /** where the pointer holds it */
   target: Vector3;
+  /** distance of its plane of the sky from the hole's, toward the camera (r_s) */
+  depth: number;
+  /** velocity while drifting by, r_s per real second */
+  drift: Vector3;
+  wasDrifting: boolean;
   q: Quaternion;
   /** angular velocity, rad per real second */
   w: Vector3;
@@ -98,6 +105,17 @@ const SHRED_TIME = 0.6;
 const D0 = -0.6;
 const D1 = 1.1;
 const MAX_FLYING = 6;
+/**
+ * Clock of the objects drifting by: far slower than the infall's time-lapse, so the hole's
+ * gravity only bends their paths (a hyperbolic flyby) instead of swallowing them.
+ */
+const DRIFT_LAPSE = 2.6;
+/**
+ * Drifters keep at least this far from the hole, r_s; when they pass behind it, also this far
+ * from it in the plane of the sky (so they are never seen sliding across the shadow).
+ */
+const DRIFT_CLEARANCE = 7.5;
+const DRIFT_SKY_CLEARANCE = 6;
 const MAX_BODIES = 10;
 const PARTICLE_LIFE = 14;
 
@@ -117,6 +135,14 @@ function chroma(T: number) {
   return c;
 }
 const WHITE = chroma(6500);
+
+/** Paczyński–Wiita gravity on the drift clock (real seconds, semi-implicit Euler). */
+function driftStep(p: Vector3, v: Vector3, dt: number) {
+  const r = Math.max(p.length(), 1.5);
+  const a = (-0.5 / ((r - 1) * (r - 1) * r)) * DRIFT_LAPSE * DRIFT_LAPSE;
+  v.addScaledVector(p, a * dt);
+  p.addScaledVector(v, dt);
+}
 
 /**
  * Things a visitor throws into the black hole, and what the hole does to them: a tidal
@@ -298,18 +324,24 @@ export class Junk implements Chapter {
   /** Picks an object up at a screen point (CSS px); move it with moveHeld, let go with release. */
   hold(id: JunkId, x: number, y: number): number {
     this.makeRoom();
-    const p = this.spawnPoint(x, y, new Vector3());
+    return this.addBody(id, this.spawnPoint(x, y, 0, new Vector3()), 'held', 0);
+  }
+
+  private addBody(id: JunkId, p: Vector3, state: State, depth: number): number {
     const rand = Math.random;
     const b: Body = {
       uid: this.uid++,
       id,
-      state: 'held',
+      state,
       mesh: new Mesh(modelGeometry(id), this.bodyMaterial()),
       samples: surfaceSamples(id, this.perBody),
       mass: MASS[id] ?? 1,
       p,
       v: new Vector3(),
       target: p.clone(),
+      depth,
+      drift: new Vector3(),
+      wasDrifting: false,
       q: new Quaternion().setFromAxisAngle(new Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize(), rand() * Math.PI * 2),
       w: new Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(0.8 + rand() * 1.4),
       age: 0,
@@ -340,7 +372,116 @@ export class Junk implements Chapter {
 
   moveHeld(uid: number, x: number, y: number) {
     const b = this.find(uid);
-    if (b?.state === 'held') this.spawnPoint(x, y, b.target);
+    if (b?.state === 'held') this.spawnPoint(x, y, b.depth, b.target);
+  }
+
+  /** Number of objects drifting by on their own. */
+  get drifting(): number {
+    let n = 0;
+    for (const b of this.bodies) if (b.state === 'drifting') n++;
+    return n;
+  }
+
+  /**
+   * Sends an object drifting through the view: a slow, tumbling flyby whose path the hole's
+   * gravity bends, well clear of the hole and away from the hero text. Returns its id, or null
+   * when no good path turned up this time.
+   */
+  spawnDrifter(id: JunkId): number | null {
+    this.syncCamera();
+    const W = this.cssW;
+    const H = this.cssH;
+    const portrait = W / H < 0.9;
+    const m = Math.min(W, H) * 0.14;
+    // the hero copy sits bottom-left on wide screens and along the bottom on phones
+    const overText = (x: number, y: number) => (portrait ? y > H * 0.55 : x < W * 0.76 && y > H * 0.46);
+    const obs = new Vector3().copy(this.bh.view.camPos).normalize();
+    for (let attempt = 0; attempt < 60; attempt++) {
+      // a point in the open sky that the path goes through, and a direction; the path runs from
+      // just beyond one edge of the view to just beyond another
+      const mx = W * (0.15 + 0.7 * Math.random());
+      const my = H * (0.1 + (portrait ? 0.4 : 0.42) * Math.random());
+      if (overText(mx, my)) continue;
+      const th = Math.random() * Math.PI * 2;
+      const dx = Math.cos(th);
+      const dy = Math.sin(th);
+      const exit = (sx: number, sy: number) => Math.min(Math.abs(sx) > 1e-6 ? ((sx > 0 ? W + m : -m) - mx) / sx : Infinity, Math.abs(sy) > 1e-6 ? ((sy > 0 ? H + m : -m) - my) / sy : Infinity);
+      const tB = exit(dx, dy);
+      const tA = exit(-dx, -dy);
+      const ax = mx - dx * tA;
+      const ay = my - dy * tA;
+      const bx = mx + dx * tB;
+      const by = my + dy * tB;
+      if (tA + tB < 0.8 * Math.min(W, H)) continue;
+      let crossesText = false;
+      for (const f of [0.1, 0.25, 0.4, 0.55, 0.7, 0.85]) if (overText(ax + (bx - ax) * f, ay + (by - ay) * f)) crossesText = true;
+      if (crossesText) continue;
+      // they pass in front of the hole, like foreground debris; the hole and its disk fill most
+      // of the sky, and in front they stay clear of it in 3-D while floating over the disk.
+      // Phones have even less sky around the hole: nearer still (and bigger on the small screen)
+      const depth = portrait ? 7 + Math.random() * 5 : 1 + Math.random() * 9;
+      const A = this.planePoint(ax, ay, depth, new Vector3());
+      const B = this.planePoint(bx, by, depth, new Vector3());
+      // an unhurried pace: about 9–14 s to drift across the shorter side of the view
+      const T = (tA + tB) / (Math.min(W, H) / (9 + Math.random() * 5));
+      const v = B.clone().sub(A).divideScalar(T);
+      // fly it once to make sure it stays clear of the hole
+      const p = A.clone();
+      const u = v.clone();
+      let ok = true;
+      for (let t = 0; t < T * 1.4 && ok; t += 0.1) {
+        driftStep(p, u, 0.1);
+        const along = p.dot(obs);
+        const sky = Math.sqrt(Math.max(0, p.lengthSq() - along * along));
+        if (p.length() < DRIFT_CLEARANCE || (along < 0 && sky < DRIFT_SKY_CLEARANCE)) ok = false;
+      }
+      if (!ok) continue;
+      const uid = this.addBody(id, A, 'drifting', depth);
+      const b = this.find(uid)!;
+      b.drift.copy(v);
+      // a lazier tumble than a throw
+      b.w.multiplyScalar(0.4);
+      return uid;
+    }
+    return null;
+  }
+
+  /** The drifting object under a screen point (CSS px), if any. */
+  pick(x: number, y: number): number | null {
+    if (this.drifting === 0) return null;
+    this.syncCamera();
+    let best: number | null = null;
+    let bestD = Infinity;
+    const s = { x: 0, y: 0, radius: 0 };
+    for (const b of this.bodies) {
+      if (b.state !== 'drifting') continue;
+      this.screenOf(b, s);
+      const d = Math.hypot(x - s.x, y - s.y);
+      if (d < s.radius * 0.9 + 18 && d < bestD) {
+        bestD = d;
+        best = b.uid;
+      }
+    }
+    return best;
+  }
+
+  /** Takes hold of a drifting object (to fling it). */
+  grab(uid: number, x: number, y: number) {
+    const b = this.find(uid);
+    if (b?.state !== 'drifting') return;
+    b.state = 'held';
+    b.wasDrifting = true;
+    this.spawnPoint(x, y, b.depth, b.target);
+  }
+
+  /** Sends a drifting object in, keeping its momentum. */
+  throwDrifter(uid: number) {
+    const b = this.find(uid);
+    if (b?.state !== 'drifting') return;
+    b.state = 'held';
+    b.wasDrifting = true;
+    b.target.copy(b.p);
+    this.release(uid);
   }
 
   /** Lets go with the pointer's velocity (CSS px per second). */
@@ -356,7 +497,12 @@ export class Junk implements Chapter {
       .multiplyScalar(vx * worldPerPx)
       .addScaledVector(view.up, -vy * worldPerPx)
       .divideScalar(TIME_LAPSE);
-    const fling = v.length() > 0.03;
+    let fling = v.length() > 0.03;
+    // a drifter that is just clicked keeps some of its momentum and heads for the hole
+    if (!fling && b.wasDrifting) {
+      v.copy(b.drift).divideScalar(TIME_LAPSE * 2).addScaledVector(b.p, -0.045 / r0);
+      fling = true;
+    }
     // a plain drop gets a little push toward the hole so it doesn't dawdle
     if (!fling) v.addScaledVector(b.p, -0.05 / r0);
     const heavy = b.mass > 1;
@@ -392,6 +538,7 @@ export class Junk implements Chapter {
   /** Keeps the number of objects bounded: the oldest flying one is torn apart at once. */
   private makeRoom() {
     const flying = this.bodies.filter((b) => b.state === 'falling' || b.state === 'shredding');
+    // (drifters don't count: they leave on their own)
     if (flying.length >= MAX_FLYING) {
       const oldest = flying.find((b) => b.state === 'falling');
       if (oldest) this.beginShred(oldest);
@@ -403,8 +550,8 @@ export class Junk implements Chapter {
     }
   }
 
-  /** Screen point → the plane of the sky through the hole, kept within a sensible distance. */
-  private spawnPoint(x: number, y: number, out: Vector3): Vector3 {
+  /** Screen point (CSS px) → a plane of the sky, `depth` r_s from the hole toward the camera. */
+  private planePoint(x: number, y: number, depth: number, out: Vector3): Vector3 {
     const v = this.bh.view;
     const nx = (x / this.cssW) * 2 - 1 - v.lensShift.x;
     const ny = -((y / this.cssH) * 2 - 1) - v.lensShift.y;
@@ -413,12 +560,16 @@ export class Junk implements Chapter {
       .addScaledVector(v.right, nx * v.aspect * v.tanHalfFov)
       .addScaledVector(v.up, ny * v.tanHalfFov);
     const o = _w.copy(v.camPos).normalize();
-    const t = -v.camPos.dot(o) / Math.min(dir.dot(o), -1e-3);
-    out.copy(v.camPos).addScaledVector(dir, t);
+    const t = (depth - v.camPos.dot(o)) / Math.min(dir.dot(o), -1e-3);
+    return out.copy(v.camPos).addScaledVector(dir, t);
+  }
+
+  /** Where a thrown object starts: on the pointer, kept within a sensible distance of the hole. */
+  private spawnPoint(x: number, y: number, depth: number, out: Vector3): Vector3 {
+    this.planePoint(x, y, depth, out);
     const r = out.length();
-    if (r < 1e-3) out.copy(v.right);
-    const rr = clamp(r, 7.5, 26);
-    return out.setLength(rr);
+    if (r < 1e-3) out.copy(this.bh.view.right);
+    return out.setLength(clamp(r, 7.5, 26));
   }
 
   // ── the disruption ─────────────────────────────────────────────────────────────────────────
@@ -539,7 +690,17 @@ export class Junk implements Chapter {
       const b = this.bodies[i]!;
       b.age += dt;
       b.fade = Math.min(1, b.fade + dt / 0.18);
-      if (b.state === 'held') {
+      if (b.state === 'drifting') {
+        driftStep(b.p, b.drift, dt);
+        _q.setFromAxisAngle(_v.copy(b.w).normalize(), b.w.length() * dt);
+        b.q.premultiply(_q);
+        b.stretch = 1;
+        // gone once it has crossed the view
+        if ((b.age > 3 && this.offscreen(b)) || b.age > 60) {
+          this.removeBody(i);
+          continue;
+        }
+      } else if (b.state === 'held') {
         // follows the pointer with a little lag, tugged and stretched toward the hole
         b.p.lerp(b.target, damp(16, dt));
         const r = b.p.length();
@@ -547,8 +708,11 @@ export class Junk implements Chapter {
         _q.setFromAxisAngle(_v.copy(b.w).normalize(), b.w.length() * dt * 0.35);
         b.q.premultiply(_q);
       } else if (b.state !== 'done') {
-        const r = step(b.p, b.v, dts);
-        _q.setFromAxisAngle(_v.copy(b.w).normalize(), b.w.length() * dt);
+        // speed ramp: a little slow motion on the way in, so the object can be seen, then full
+        // speed from the tidal radius on, so the disruption keeps its snap
+        const ramp = b.state === 'shredding' ? 1 : 0.7 + 0.3 * smoothstep(TIDAL_R * 1.8, TIDAL_R * 1.05, b.p.length());
+        const r = step(b.p, b.v, dts * ramp);
+        _q.setFromAxisAngle(_v.copy(b.w).normalize(), b.w.length() * dt * ramp);
         b.q.premultiply(_q);
         b.stretch = tidalStretch(r);
         // tidal heating sets in just outside the tidal radius
@@ -668,35 +832,42 @@ export class Junk implements Chapter {
     return k;
   }
 
-  /** Where the flying objects are on screen, for their captions. */
+  /** Lensed screen position (CSS px) and apparent radius of a body, as the shaders draw it. */
+  private screenOf(b: Body, out: { x: number; y: number; radius: number }) {
+    const view = this.bh.view;
+    const obs = _w.copy(view.camPos).normalize();
+    const r = b.p.length();
+    const along = b.p.dot(obs);
+    const perp = _v.copy(b.p).addScaledVector(obs, -along);
+    const d = perp.length();
+    const bimp = d + (lensedImpact(r, along / r) - d) * view.lensing;
+    if (d > 1e-5) perp.multiplyScalar(bimp / d);
+    perp.addScaledVector(obs, along);
+    const depth = Math.max(_w.copy(perp).sub(view.camPos).dot(view.fwd), 1);
+    perp.project(this.camera);
+    out.x = ((perp.x + 1) / 2) * this.cssW;
+    out.y = ((1 - perp.y) / 2) * this.cssH;
+    out.radius = (BODY_RADIUS * this.cssH) / (2 * view.tanHalfFov) / depth;
+    return out;
+  }
+
+  private offscreen(b: Body) {
+    const s = this.screenOf(b, { x: 0, y: 0, radius: 0 });
+    const m = s.radius + 40;
+    return s.x < -m || s.x > this.cssW + m || s.y < -m || s.y > this.cssH + m;
+  }
+
+  /** Where the objects are on screen, for their captions. */
   captions(out: Caption[] = []): Caption[] {
     out.length = 0;
     if (this.bodies.length === 0) return out;
-    const view = this.bh.view;
-    const obs = _w.copy(view.camPos).normalize();
-    const pxPerUnit = this.cssH / (2 * view.tanHalfFov);
+    this.syncCamera();
+    const s = { x: 0, y: 0, radius: 0 };
     for (const b of this.bodies) {
       if (b.state === 'done') continue;
-      // lensed image of the centre, as in the shaders
-      const r = b.p.length();
-      const along = b.p.dot(obs);
-      const perp = _v.copy(b.p).addScaledVector(obs, -along);
-      const d = perp.length();
-      const bl = lensedImpact(r, along / r);
-      const bimp = d + (bl - d) * view.lensing;
-      if (d > 1e-5) perp.multiplyScalar(bimp / d);
-      perp.addScaledVector(obs, along);
-      const depth = perp.clone().sub(view.camPos).dot(view.fwd);
-      perp.project(this.camera);
+      this.screenOf(b, s);
       const alpha = b.fade * (b.state === 'shredding' ? 1 - clamp(b.shredT / (SHRED_TIME * 0.5)) : 1);
-      out.push({
-        uid: b.uid,
-        id: b.id,
-        x: ((perp.x + 1) / 2) * this.cssW,
-        y: ((1 - perp.y) / 2) * this.cssH,
-        radius: (BODY_RADIUS * pxPerUnit) / Math.max(depth, 1),
-        alpha: alpha * this.weight,
-      });
+      out.push({ uid: b.uid, id: b.id, x: s.x, y: s.y, radius: s.radius, alpha: alpha * this.weight, drifting: b.state === 'drifting' });
     }
     return out;
   }

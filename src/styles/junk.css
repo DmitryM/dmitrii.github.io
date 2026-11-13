@@ -80,6 +80,54 @@
   will-change: transform, opacity;
 }
 
+/* something drifting by: its caption is a button, and the object itself can be clicked */
+.junk-caption--drifter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  cursor: pointer;
+  border-color: rgb(255 180 107 / 0.32);
+  transition:
+    border-color 0.3s,
+    color 0.3s,
+    background-color 0.3s;
+}
+.junk-caption--drifter::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: junk-beacon 1.8s ease-in-out infinite;
+}
+.junk-caption--drifter:hover,
+.junk-caption--drifter:focus-visible {
+  color: var(--ink);
+  border-color: var(--amber);
+  background: rgb(255 180 107 / 0.1);
+}
+.junk-caption--drifter:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+@keyframes junk-beacon {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .junk-caption--drifter::before {
+    animation: none;
+  }
+}
+.junk-hover,
+.junk-hover * {
+  cursor: pointer !important;
+}
+
 /* the log after each annihilation */
 .junk-log {
   position: fixed;

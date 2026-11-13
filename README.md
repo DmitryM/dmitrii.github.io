@@ -49,14 +49,15 @@ In the hero (and in the observatory) visitors can throw things in. They are 14 p
 - a USB plug
 
 **Interaction:**
+- **Drifters:** every 7–15 s, one of them drifts through the view on its own (at most two at a time, not with reduced motion). They are slow, tumbling flybys on a hyperbolic path that the hole's gravity bends, kept clear of the hole and of the hero text. Click or tap one, or its caption (a button, so it works from the keyboard too), and it goes in. With the mouse you can also grab it and fling it.
 - **Mouse:** press on empty sky to pick the next object up, then release to fling it. A plain click drops it in.
 - **Touch:** a tap throws.
-- **Observatory:** a tap throws, and dragging still orbits.
-- **"Throw something in" button:** tosses one in from the edge of the view.
+- **Observatory:** a tap throws, and dragging still orbits. The panel also has a "Throw something in" button.
 
 Each object gets a caption while it flies, and a log line once it's gone.
 
 **What happens to it** is a tidal disruption event:
+- **Speed ramp.** The infall plays back at 70% speed while the object is far out, so it can be seen, and ramps up to full speed by the tidal radius, so the disruption keeps its snap.
 - **Orbit.** The body falls on a Paczyński–Wiita orbit (Φ = −GM/(r − r_s)). This potential has the Schwarzschild ISCO at 3 r_s and the marginally bound orbit at 2 r_s. Launches are aimed so that the pericentre lies outside the centrifugal barrier, so the body whips around the hole instead of dropping straight in.
 - **Tidal stretching.** The body is stretched along the radial direction and squeezed across it, growing as r⁻³. Inside the tidal radius (≈ 6.5 r_s) it comes apart from the side facing the hole, along a glowing dissolve front.
 - **Debris.** Surface samples become free particles that carry the local velocity of the body.
